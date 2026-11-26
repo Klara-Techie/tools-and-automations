@@ -117,6 +117,49 @@ class KnobLights {
             strength = distance < 3 ? 255 >> distance : 8;
             break;
           }
+          case 12: {
+            const unsigned phase = elapsed % 2600;
+            const unsigned first = phase > 400 ? phase - 400 : 400 - phase;
+            const unsigned second = phase > 1000 ? phase - 1000 : 1000 - phase;
+            const unsigned beat1 = first < 360 ? (360 - first) * 235 / 360 : 0;
+            const unsigned beat2 = second < 300 ? (300 - second) * 150 / 300 : 0;
+            strength = 20 + (beat1 > beat2 ? beat1 : beat2);
+            break;
+          }
+          case 13: {
+            const unsigned beam = (elapsed / 200) % KNOB_LEDS_PER_RING;
+            const unsigned offset = (position + KNOB_LEDS_PER_RING - beam) % KNOB_LEDS_PER_RING;
+            const unsigned opposite = (offset + KNOB_LEDS_PER_RING / 2) % KNOB_LEDS_PER_RING;
+            const unsigned distance = offset < KNOB_LEDS_PER_RING - offset ?
+                                      offset : KNOB_LEDS_PER_RING - offset;
+            const unsigned otherDistance = opposite < KNOB_LEDS_PER_RING - opposite ?
+                                           opposite : KNOB_LEDS_PER_RING - opposite;
+            const unsigned closest = distance < otherDistance ? distance : otherDistance;
+            strength = closest < 3 ? 255 >> closest : 12;
+            break;
+          }
+          case 14: {
+            const unsigned shimmer = smoothNoise(position + 73, elapsed, 1800);
+            color = Adafruit_NeoPixel::ColorHSV(
+                static_cast<uint16_t>(44000 + smoothNoise(position + 11, elapsed, 4500) * 55));
+            strength = 35 + shimmer * 220 / 255;
+            break;
+          }
+          case 15: {
+            const unsigned ring = i / KNOB_LEDS_PER_RING;
+            const unsigned phase = (elapsed / 10 + ring * 128) % 512;
+            const unsigned wave = phase <= 255 ? phase : 511 - phase;
+            color = Adafruit_NeoPixel::ColorHSV(ring ? 45000 : 33000);
+            strength = 25 + wave * 230 / 255;
+            break;
+          }
+          case 16: {
+            const unsigned ring = i / KNOB_LEDS_PER_RING;
+            const unsigned segment =
+                (position * 6 / KNOB_LEDS_PER_RING + elapsed / 300 + ring * 3) % 6;
+            color = Adafruit_NeoPixel::ColorHSV(static_cast<uint16_t>(segment * 10922));
+            break;
+          }
         }
       }
       const unsigned level = uint32_t(strength) * settings_.brightness *

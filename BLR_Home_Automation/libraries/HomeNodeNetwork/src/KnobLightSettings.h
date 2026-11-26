@@ -4,7 +4,8 @@
 
 const char* const KNOB_PATTERNS[] = {
   "solid", "breathing", "rainbow", "chase", "comet", "color_cycle",
-  "aurora", "ocean", "fire", "candle", "twinkle", "pendulum"
+  "aurora", "ocean", "fire", "candle", "twinkle", "pendulum",
+  "heartbeat", "lighthouse", "nebula", "dual_breathing", "color_segments"
 };
 const size_t KNOB_PATTERN_COUNT = sizeof(KNOB_PATTERNS) / sizeof(KNOB_PATTERNS[0]);
 

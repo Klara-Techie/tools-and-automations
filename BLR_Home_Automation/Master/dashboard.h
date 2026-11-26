@@ -123,7 +123,7 @@ h1{font:clamp(17px,4.6vw,23px)/1.25 Georgia,"Times New Roman",serif;letter-spaci
 .master-copy{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .master-copy strong{display:block;font-size:14px}
 .master-copy .muted{font-size:11px;white-space:nowrap}
-.master-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.master-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:8px}
 .master-controls .primary,.master-controls .timer-row button{padding:7px 4px;font-size:11px;line-height:1.2}
 .primary{font-weight:650;background:#252a33;border-color:#505967;color:#d7dee8}
 .primary.is-active{
@@ -131,8 +131,8 @@ h1{font:clamp(17px,4.6vw,23px)/1.25 Georgia,"Times New Roman",serif;letter-spaci
   border-color:#8995a5;
   color:#f1f2f4;
 }
-.master-timer{min-width:0;grid-column:span 2}
-.master-timer .timer-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.master-timer{min-width:0}
+.master-timer .timer-row{grid-template-columns:minmax(0,1fr) 56px;gap:8px;margin:0}
 .master-timer input{text-align:center}
 .remote{display:grid;grid-template-columns:1fr;overflow:hidden;border-top:2px solid #929ba9}
 .level{
@@ -228,14 +228,14 @@ header{border:0;padding:0;justify-content:space-between;gap:12px}
   .status.on{background:color-mix(in srgb,var(--device-accent) 10%,transparent);border-color:color-mix(in srgb,var(--device-accent) 35%,transparent)}
 }
 .card h3{margin:13px 0 0;font-size:15px;letter-spacing:-.01em}
-.icon{width:50px;height:50px;border-radius:16px;background:#ffffff0b;border-color:#ffffff17;color:#b5c6d8}
+.icon{width:58px;height:50px;border-radius:16px;background:#ffffff0b;border-color:#ffffff17;color:#b5c6d8}
 .icon.on{color:var(--device-accent);box-shadow:0 0 18px color-mix(in srgb,var(--device-accent) 15%,transparent)}
 .status{display:inline-flex;align-items:center;gap:6px;border-radius:100px;padding:5px 9px;background:#ffffff08;color:#a9b5c8}
 .status::before{content:"";width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#69788a}
 .status.on{color:var(--device-accent)}
 .status.on::before{background:var(--device-accent);box-shadow:0 0 8px var(--device-accent)}
 .timer{margin-top:15px;padding-top:13px;border-color:#ffffff17}
-.timer-row{gap:8px}
+.timer-row{grid-template-columns:minmax(0,1fr) 52px;gap:8px}
 .timer-row input,.timer-row .countdown,.knob-fields input[type=color],.knob-fields select{border-radius:10px;border-color:#ffffff20;background:#111b2a}
 button{border-radius:11px;transition:filter .15s,transform .15s,border-color .15s}
 button:active:not(:disabled){transform:scale(.97)}
@@ -267,17 +267,17 @@ button:active:not(:disabled){transform:scale(.97)}
   .voyage-lockup{max-width:160px}
   .section{margin-top:25px}
   .card{padding:12px}
-  .icon{width:46px;height:46px}
+  .icon{width:58px;height:46px}
   .card h3{font-size:14px}
   .level{padding:10px 12px}
 }
-@media(max-width:350px){.hero-copy h2{font-size:29px}.timer-row{grid-template-columns:minmax(0,1fr) 58px}}
+@media(max-width:350px){.hero-copy h2{font-size:29px}.timer-row{grid-template-columns:minmax(0,1fr) 52px}}
 </style>
 </head>
 <body><main>
 <div class="hero">
-  <header><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10a7 7 0 0 1 14 0c0 2.4-1.1 3.9-2.7 4.8V19H7.7v-4.2C6.1 13.9 5 12.4 5 10Z"/><circle cx="9" cy="10.5" r="1.25"/><circle cx="15" cy="10.5" r="1.25"/><path d="m12 13-1 1.5h2L12 13ZM9.7 19v-2m4.6 2v-2M3 19l3 2m15-2-3 2"/></svg></div><div><h1>Captain Karthik Sparroww 🏴‍☠️</h1></div></div></header>
-  <div class="hero-copy"><h2>Black Pearl</h2></div>
+  <header><div class="brand"><div class="logo" aria-hidden="true">☠️</div><div><h1>Captain Karthik Sparroww 🏴‍☠️</h1></div></div></header>
+  <div class="hero-copy"><h2>Black Pearl 🥂</h2></div>
   <div class="voyage-lockup">
   <svg class="voyage-art" viewBox="75 0 385 255" aria-hidden="true" focusable="false">
     <defs>
@@ -316,7 +316,7 @@ button:active:not(:disabled){transform:scale(.97)}
     <div class="master-controls">
       <button id="allToggle" class="primary" title="Controls TV, amplifier and LED strip" disabled>All on</button>
       <div class="master-timer">
-        <div class="timer-row"><div class="timer-input"><input id="allMinutes" type="number" min="1" max="10080" inputmode="numeric" placeholder="Min" aria-label="TV, amplifier and LED off timer minutes" disabled><span id="allCountdown" class="countdown" role="timer" aria-label="TV, amplifier and LED remaining off time" hidden></span></div><button id="allStart" class="start" disabled>START</button><button id="allCancel" class="cancel" aria-label="Cancel all TV, amplifier and LED strip timers" hidden disabled>CANCEL ALL</button></div>
+        <div class="timer-row"><div class="timer-input"><input id="allMinutes" type="number" min="1" max="10080" inputmode="numeric" placeholder="Min" aria-label="TV, amplifier and LED off timer minutes" disabled><span id="allCountdown" class="countdown" role="timer" aria-label="TV, amplifier and LED remaining off time" hidden></span></div><button id="allStart" class="start" aria-label="Start TV, amplifier and LED off timer" disabled>START</button><button id="allCancel" class="cancel" aria-label="Cancel all TV, amplifier and LED strip timers" hidden disabled>CANCEL ALL</button></div>
       </div>
     </div>
   </div>
@@ -346,7 +346,7 @@ button:active:not(:disabled){transform:scale(.97)}
           <span class="knob-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v9m-5-7a8 8 0 1 0 10 0"/></svg></span>
         </label>
         <div class="knob-fields">
-          <label class="knob-pattern"><select id="knobPattern" aria-label="Pattern"><option value="solid">Solid</option><option value="breathing">Breathing</option><option value="rainbow">Rainbow</option><option value="chase">Chase</option><option value="comet">Comet</option><option value="color_cycle">Colour cycle</option><option value="aurora">Aurora</option><option value="ocean">Ocean waves</option><option value="fire">Fire glow</option><option value="candle">Candlelight</option><option value="twinkle">Starlight twinkle</option><option value="pendulum">Pendulum</option></select></label>
+          <label class="knob-pattern"><select id="knobPattern" aria-label="Pattern"><option value="solid">Solid</option><option value="breathing">Breathing</option><option value="rainbow">Rainbow</option><option value="chase">Chase</option><option value="comet">Comet</option><option value="color_cycle">Colour cycle</option><option value="aurora">Aurora</option><option value="ocean">Ocean waves</option><option value="fire">Fire glow</option><option value="candle">Candlelight</option><option value="twinkle">Starlight twinkle</option><option value="pendulum">Pendulum</option><option value="heartbeat">Heartbeat</option><option value="lighthouse">Lighthouse</option><option value="nebula">Nebula</option><option value="dual_breathing">Dual breathing</option><option value="color_segments">Colour segments</option></select></label>
           <label><input id="knobColor" type="color" value="#8be0d5" aria-label="Colour"></label>
           <label class="knob-brightness"><span>Brightness<output id="knobBrightnessValue" for="knobBrightness">40%</output></span><input id="knobBrightness" type="range" min="0" max="100" value="40" title="Percent of the configured LED brightness ceiling"></label>
         </div>
@@ -495,7 +495,7 @@ const knobOn=document.getElementById('knobOn'),knobColor=document.getElementById
 const knobPattern=document.getElementById('knobPattern'),knobBrightness=document.getElementById('knobBrightness');
 const knobFeedback=document.getElementById('knobFeedback');
 let knobDirty=false,knobBusy=false,knobRevision=0,knobTimer=null;
-const automaticKnobColors=['rainbow','color_cycle','aurora','ocean','fire','candle'];
+const automaticKnobColors=['rainbow','color_cycle','aurora','ocean','fire','candle','nebula','dual_breathing','color_segments'];
 for(const ring of document.querySelectorAll('.knob-ring')){
   for(let i=0;i<10;i++){const pixel=document.createElement('span');pixel.className='knob-pixel';pixel.style.transform='translate(-50%,-50%) rotate('+i*36+'deg) translateY(-22px)';ring.append(pixel)}
 }

@@ -306,8 +306,9 @@ heater.
 
 The existing IR ESP8266 controls **one chain of 20 WS2812B RGB LEDs**:
 10 around the encoder, followed by 10 around the manual master-volume knob.
-Both rings share power, colour, brightness and pattern; the same animation is
-repeated on each ring. This is decorative lighting only: neither knob is
+Both rings share power, colour, brightness and pattern. Most patterns repeat
+the same animation on each ring; Dual breathing and Colour segments use
+different phases and colours. This is decorative lighting only: neither knob is
 connected to the ESP8266 or sensed, and the LEDs do not indicate actual volume.
 Knob lighting is independent of the entertainment relays and their timers.
 
@@ -323,13 +324,19 @@ overwrite pending edits. Errors are shown explicitly; change a setting to
 retry after checking the connection. Failed requests are not retried endlessly.
 
 Patterns are **Solid, Breathing, Rainbow, Chase, Comet, Colour cycle, Aurora,
-Ocean waves, Fire glow, Candlelight, Starlight twinkle and Pendulum**.
+Ocean waves, Fire glow, Candlelight, Starlight twinkle, Pendulum, Heartbeat,
+Lighthouse, Nebula, Dual breathing and Colour segments**.
 Colour cycle slowly changes the whole ring's hue; Aurora blends cool colours;
 Ocean waves gives a gentle blue swell. Fire glow and Candlelight provide warm
 flickering ambience; Starlight twinkle softly varies individual LEDs; Pendulum
-sweeps a highlight back and forth. Rainbow, Colour cycle, Aurora, Ocean waves,
-Fire glow and Candlelight choose their own colours, so the colour picker is
-disabled in those modes. Other effects use the selected colour. The single
+sweeps a highlight back and forth. Heartbeat produces a soft double pulse;
+Lighthouse rotates two opposing beams; Nebula shimmers in violet and blue.
+Dual breathing uses offset blue and violet pulses on the two rings; Colour
+segments rotates six coloured segments, offset between the rings.
+Rainbow, Colour cycle, Aurora, Ocean waves, Fire glow, Candlelight, Nebula,
+Dual breathing and Colour segments choose their own colours, so the colour
+picker is disabled in those modes.
+Other effects use the selected colour. The single
 dashboard ring is a colour illustration, not live animation or electrical
 feedback.
 
@@ -389,7 +396,7 @@ current copy, install Adafruit NeoPixel, and upload only **Master** and
 **AmpRemoteControl** (USB or existing OTA). The relay boards are unchanged.
 An older IR sketch still supports the remote but leaves knob controls
 unavailable until it is updated. Compile in Arduino IDE, then bench-test the
-LED chain on a protected low-voltage supply: check all twelve patterns, matching
+LED chain on a protected low-voltage supply: check all patterns, matching
 rings, colour/brightness limits, IR operation, reset, Wi-Fi recovery and OTA
 off behaviour before fitting it.
 
