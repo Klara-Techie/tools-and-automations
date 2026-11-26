@@ -20,70 +20,6 @@ Relay implementations live in `HomeNodeNetwork`; the master and the retained
 standalone entertainment sketch use the same entertainment relay/timer engine.
 The IR codes come from the original Blynk sketch.
 
-## Migrating entertainment relays to the master
-
-The master now drives the TV, amplifier and LED-strip relay inputs directly:
-**GPIO25, GPIO26 and GPIO27**, respectively, with active-low polarity.
-These settings are in the master's private `config.h` as `LIVING_TV`,
-`LIVING_AMP`, `LIVING_LED` and `LIVING_ACTIVE_LOW`. A value of `-1` disables
-an individual relay; an invalid or duplicate GPIO configuration disables the
-entire local relay group and logs an error.
-
-1. Switch off and isolate the installation before changing wiring. Move only
-   the properly isolated, low-voltage relay control connections to the master;
-   verify driver compatibility, grounding, supply and startup OFF behavior.
-   Never connect mains or relay coils directly to ESP32 GPIOs.
-2. Replace the installed `HomeNodeNetwork` library with the current copy, and
-   compile/upload **Master**. The room, bathroom and IR boards keep their
-   existing protocols and do not require a reflash solely for this merge.
-   The always-on hotspot migration below does require uploading all nodes.
-3. Disconnect the old entertainment controller. Its
-   [standalone sketch](EntertainmentControl/EntertainmentControl.ino) and
-   configuration are retained for reference, not as a fifth active board.
-   The merged master rejects old `living` registrations; another controller
-   cannot overwrite its local entertainment state.
-4. Bench-test individual/group commands, all timer cancellation combinations,
-   Wi-Fi/hotspot transitions, master reset and OTA with safe low-voltage
-   indicators before reconnecting real loads.
-
-**Changed reset/OTA behavior:** the TV, amplifier and LED relays now turn OFF
-when the master initializes or accepts an OTA update, and their timers are
-cleared. They remain OFF after an OTA transfer fails. Master power loss also
-loses these timers; use relay hardware that defaults OFF. The wall-board
-socket timer and bathroom heater cutoff still run on their own boards.
-Wi-Fi loss alone does not stop local entertainment timers. They are
-cooperative software timers, so blocking network work can briefly delay
-expiry handling; they are not electrical safety devices.
-
-## Dashboard theme backup
-
-The previous neon theme, including the captain name and pirate flag, is saved
-unchanged in [themes/NeonBedroom/dashboard.h](themes/NeonBedroom/dashboard.h).
-To restore it, copy that file over `Master/dashboard.h`, then upload only the
-master sketch. That historical backup does not include the new knob-lighting
-controls. The active theme uses pirate-inspired styling with local fonts and
-CSS/SVG artwork; it needs no external images or Internet access. A compact
-header combines the captain's name, skull emblem, Black Pearl wordmark, and
-ship and moon artwork.
-The dashboard is mobile-first: two-column appliance cards and full-width
-volume rows. Cards use coloured outlines, icons and glowing status indicators
-to distinguish ON devices; All on and START use muted dark fills. Controls
-retain 44-pixel tap targets and 16-pixel mobile form text. Live status,
-countdowns and knob auto-save remain. Decorative LED firmware patterns are
-unchanged.
-The Entertainment power tile places equally sized All on/off, minutes and
-START/CANCEL ALL controls in a single row beneath its heading.
-Volume-command progress/results appear beside the corresponding channel name
-(for example, `Master | Volume up · sent`), with requests still serialized.
-Clicking another volume control clears the previous inline message; only the
-latest command updates its channel's feedback, even if an older request finishes later.
-An active individual timer replaces START with CANCEL in the same position;
-its remaining time appears inside the Min field instead of a separate timer
-heading. Expiry or cancellation restores the minutes input and START. The group row similarly shows CANCEL
-ALL while any TV/amplifier/LED timer is active, preserving its existing
-cancel-all behavior. Socket timers remain independent. Offline timer actions
-are disabled.
-
 ## Installation and configuration
 
 1. Install Arduino IDE 2, the ESP32 and ESP8266 board packages, and select the
@@ -124,26 +60,68 @@ are disabled.
    `http://192.168.31.200/` from a phone on the router Wi-Fi and sign in with
    the master dashboard credentials.
 
-## Default pin plan
+## Wiring and default pinouts
 
-These are GPIO numbers, not ESP8266 D labels. The ESP32 assignments assume a
-classic ESP32 Dev Module with these GPIOs exposed; verify the exact board's
-pinout. The ESP8266 D labels assume NodeMCU 1.0.
+These are firmware defaults, not a verified wiring diagram. GPIO numbers are
+not physical pin numbers; ESP8266 D labels below assume NodeMCU 1.0. Check
+the exact board, its `config.h`, and driver compatibility before wiring.
+Disconnect power before working on hardware. Have a qualified electrician
+design and check any mains installation.
 
-| Board | Function | GPIO | NodeMCU label |
+### Master ESP32: entertainment relays
+
+| Function | GPIO | Configuration | Low-voltage connection |
 | --- | --- | --- | --- |
-| Master ESP32 | TV / amplifier / LED relays | 25 / 26 / 27 | — |
-| Room ESP32 | Fan / light / Socket / Socket 2 relays | 25 / 26 / 27 / 33 | — |
-| Room ESP32 | Fan / light / Socket / Socket 2 switches | 18 / 19 / 21 / 22 | — |
-| Bathroom ESP8266 | Heater relay | 5 | D1 |
-| IR ESP8266 | IR LED driver | 4 | D2 |
-| IR ESP8266 | WS2812B knob chain data | 5 | D1 |
+| TV | 25 | `LIVING_TV` | Relay driver input |
+| Amplifier | 26 | `LIVING_AMP` | Relay driver input |
+| LED strip | 27 | `LIVING_LED` | Relay driver input |
 
-Room switches are isolated contacts between the input GPIO and GND; firmware
-enables the ESP32's internal pull-ups. The selected pins avoid ESP8266 boot
-strapping pins and the ESP32's input-only, boot-strapping, serial and flash
-pins. The pin plan is not a substitute for checking the exact board or testing
-reset behavior.
+The defaults use active-low relay inputs (`LIVING_ACTIVE_LOW`). Use a relay
+driver compatible with 3.3 V logic and an independent hardware OFF state;
+never connect a relay coil or mains directly to a GPIO.
+
+### Room ESP32: relays and wall switches
+
+| Function | Relay GPIO | Switch GPIO | Configuration |
+| --- | --- | --- | --- |
+| Fan | 25 | 18 | `WALL_FAN`, `WALL_FAN_SWITCH` |
+| Light | 26 | 19 | `WALL_LIGHT`, `WALL_LIGHT_SWITCH` |
+| Socket | 27 | 21 | `WALL_SOCKET1`, `WALL_SOCKET1_SWITCH` |
+| Socket 2 | 33 | 22 | `WALL_SOCKET2`, `WALL_SOCKET2_SWITCH` |
+
+Relay GPIOs control compatible relay driver inputs, active-low by default
+(`WALL_ACTIVE_LOW`). Each switch GPIO uses the internal pull-up and an
+isolated, maintained contact to the board's GND. These inputs are low-voltage
+only; never connect mains to them.
+
+### Bathroom ESP8266: heater relay
+
+| Function | GPIO | NodeMCU | Configuration | Low-voltage connection |
+| --- | --- | --- | --- | --- |
+| Water heater | 5 | D1 | `HEATER_RELAY` | Relay driver input |
+
+The default relay polarity is active-low (`HEATER_ACTIVE_LOW`). The heater
+requires independent thermostat and thermal protection; its software timer
+is not a safety device.
+
+### Amplifier ESP8266: IR and knob lighting
+
+| Function | GPIO | NodeMCU | Configuration | Low-voltage connection |
+| --- | --- | --- | --- | --- |
+| IR transmitter | 4 | D2 | `IR_LED_PIN` | Appropriately designed IR LED driver |
+| Knob LED data | 5 | D1 | `KNOB_LED_PIN` | Logic buffer, then first WS2812B ring DIN |
+
+The two ten-LED rings form one daisy chain. See
+[Low-voltage wiring and power](#low-voltage-wiring-and-power) for their
+separate supply, shared ground, level shifting and power precautions.
+D1 on this board is separate from D1 on the bathroom board.
+
+All relay drivers must match their configured polarity and have an independent
+hardware OFF state during startup and reset. `-1` disables a relay channel;
+invalid or conflicting configurations can disable outputs and are logged.
+The selected pins avoid ESP8266 boot-strapping pins and the ESP32's input-only,
+boot-strapping, serial and flash pins, but the exact board and reset behavior
+still need verification.
 
 ## Always-on master hotspot
 
@@ -167,25 +145,6 @@ node's hotspot address.
 * Status updates are pushed to open dashboards; a periodic refresh is also used.
   The existing API `ap` flag means hotspot-only operation (router disconnected),
   not whether the always-on hotspot exists.
-
-### Migrating from router-connected nodes
-
-1. Replace the installed `HomeNodeNetwork` library with the current copy.
-2. Upload **Master**, then **AmpRemoteControl**, **RoomSwitchControl** and
-   **BathRoomSwitchControl**. Updating only the master leaves old nodes trying
-   the router first. Use USB for this migration if network uploads are unreliable.
-3. Expect the master to log `Always-on master hotspot address: 192.168.4.1`.
-   Each node should log `Connected to master hotspot Home-Automation`, obtain
-   a `192.168.4.x` address, and report
-   `Registered with master: http://192.168.4.1/internal/register`.
-4. With safe low-voltage indicators, verify commands and state updates from
-   both phone networks. Disconnect/restore the router and verify node recovery,
-   commands and timers through the hotspot; also restart a node and confirm
-   it rejoins without router Wi-Fi. Test OTA from the hotspot separately.
-
-Uploading/restarting the master turns its three local relays OFF and clears
-their timers, as described above. No GPIO or private credential changes are
-required for this network migration.
 
 ### Node registration troubleshooting
 
@@ -228,6 +187,50 @@ The amp logs each accepted knob-lighting request with ON/OFF, pattern, color and
 brightness, and logs rejected requests explicitly. Startup also logs the LED
 GPIO/count if initialization succeeds. These confirm firmware settings, not
 physical LED output; settings can change while lighting is OFF.
+
+## iPhone Shortcuts and Siri
+
+The master API can be used from an iPhone on the same Wi-Fi without changing
+the firmware. For example, create a shortcut named **Turn on the TV**:
+
+1. Connect the iPhone to the home Wi-Fi and open the Shortcuts app.
+2. Add a **Text** action containing your dashboard username and password in
+   the format `username:password`. Use your own credentials, not those
+   literal words.
+3. Add **Base64 Encode**, using the text from the previous action as input.
+4. Add **Get Contents of URL** and configure:
+   * URL: `http://192.168.31.200/api/relay` (or your configured master IP).
+   * Method: **POST**.
+   * Headers: `X-Requested-With` = `XMLHttpRequest` and `Authorization` =
+     `Basic ` followed by the **Base64 Encoded** variable from step 3.
+   * Request Body: **Form**, with `id` = `0` and `on` = `1`.
+5. Run the shortcut once to test it, then say **“Siri, Turn on the TV.”**
+   Duplicate it and change `on` to `0` to turn the TV off.
+
+Use the following IDs with `/api/relay`:
+
+| Device | `id` |
+| --- | --- |
+| TV | 0 |
+| Amplifier | 1 |
+| LED strip | 2 |
+| Fan | 3 |
+| Light | 4 |
+| Socket | 5 |
+| Socket 2 | 6 |
+| Water heater | 7 |
+
+For group control, use `POST /api/all` with the same headers and a form field
+`on` set to `1` or `0`. This controls **only the TV, amplifier and LED strip**.
+The authenticated `GET /api/state` endpoint returns the current reported
+states. A `401` response indicates authentication failed; `403` indicates the
+required request header is missing; `409` can indicate a device is offline or
+not configured.
+
+HTTP and Base64 do not encrypt credentials. Use only a trusted local network,
+do not expose the API to the internet, and do not share shortcuts containing
+your password. Test first with a safe load; a reported state is not electrical
+feedback.
 
 ## Arduino IDE OTA updates
 
@@ -303,8 +306,9 @@ heater.
 
 The existing IR ESP8266 controls **one chain of 20 WS2812B RGB LEDs**:
 10 around the encoder, followed by 10 around the manual master-volume knob.
-Both rings share power, colour, brightness and pattern; the same animation is
-repeated on each ring. This is decorative lighting only: neither knob is
+Both rings share power, colour, brightness and pattern. Most patterns repeat
+the same animation on each ring; Dual breathing and Colour segments use
+different phases and colours. This is decorative lighting only: neither knob is
 connected to the ESP8266 or sensed, and the LEDs do not indicate actual volume.
 Knob lighting is independent of the entertainment relays and their timers.
 
@@ -320,13 +324,19 @@ overwrite pending edits. Errors are shown explicitly; change a setting to
 retry after checking the connection. Failed requests are not retried endlessly.
 
 Patterns are **Solid, Breathing, Rainbow, Chase, Comet, Colour cycle, Aurora,
-Ocean waves, Fire glow, Candlelight, Starlight twinkle and Pendulum**.
+Ocean waves, Fire glow, Candlelight, Starlight twinkle, Pendulum, Heartbeat,
+Lighthouse, Nebula, Dual breathing and Colour segments**.
 Colour cycle slowly changes the whole ring's hue; Aurora blends cool colours;
 Ocean waves gives a gentle blue swell. Fire glow and Candlelight provide warm
 flickering ambience; Starlight twinkle softly varies individual LEDs; Pendulum
-sweeps a highlight back and forth. Rainbow, Colour cycle, Aurora, Ocean waves,
-Fire glow and Candlelight choose their own colours, so the colour picker is
-disabled in those modes. Other effects use the selected colour. The single
+sweeps a highlight back and forth. Heartbeat produces a soft double pulse;
+Lighthouse rotates two opposing beams; Nebula shimmers in violet and blue.
+Dual breathing uses offset blue and violet pulses on the two rings; Colour
+segments rotates six coloured segments, offset between the rings.
+Rainbow, Colour cycle, Aurora, Ocean waves, Fire glow, Candlelight, Nebula,
+Dual breathing and Colour segments choose their own colours, so the colour
+picker is disabled in those modes.
+Other effects use the selected colour. The single
 dashboard ring is a colour illustration, not live animation or electrical
 feedback.
 
@@ -386,64 +396,7 @@ current copy, install Adafruit NeoPixel, and upload only **Master** and
 **AmpRemoteControl** (USB or existing OTA). The relay boards are unchanged.
 An older IR sketch still supports the remote but leaves knob controls
 unavailable until it is updated. Compile in Arduino IDE, then bench-test the
-LED chain on a protected low-voltage supply: check all twelve patterns, matching
+LED chain on a protected low-voltage supply: check all patterns, matching
 rings, colour/brightness limits, IR operation, reset, Wi-Fi recovery and OTA
 off behaviour before fitting it.
 
-## Hardware and safety
-
-* Have a qualified electrician select and install properly rated, isolated
-  switches, relays/contactors, fusing, protective devices, enclosures and
-  independent heater thermostat and thermal cutoff. The 60-minute heater
-  timer is only software: resets, crashes, stuck relays or wiring faults can
-  defeat it. It is not a safety device. The timer starts on an OFF-to-ON
-  transition; repeated ON commands do not extend it.
-* Outputs start logically OFF after firmware initialization. MCU boot and reset
-  pin levels can still briefly energize relay inputs; use a hardware design
-  that keeps loads OFF throughout power-up, reset and failure. Do not rely on
-  the firmware to make an unsafe relay circuit safe.
-* The wall inputs are **low-voltage, isolated, maintained switch contacts**,
-  using internal pull-ups. They must never be connected directly to mains.
-  Each physical switch transition toggles its relay, including after a web
-  command; its physical position is not an absolute ON/OFF indication. At
-  startup the initial switch positions are sampled without toggling outputs.
-  After the 50 ms debounce, a room relay change queues an immediate status
-  report. The master pushes the change to connected dashboards over WebSocket.
-  Update the installed HomeNodeNetwork library and re-upload RoomSwitchControl
-  for this reporting change; the master and other nodes need no re-upload.
-* GPIO choices must suit the exact board. On ESP8266, GPIO 6–11 are normally
-  flash pins, GPIO 1/3 are reserved for serial, and GPIO 0, 2 and 15 affect
-  boot mode. On classic ESP32, GPIO 34–39 are input-only and lack internal
-  pull-ups. Do not select boot, flash or serial pins without checking the
-  board and attached circuits.
-* Use an appropriate IR LED driver and supply for the selected LED; do not
-  assume an ESP8266 GPIO can directly drive the desired IR LED current. Make
-  sure the driver stays off while the GPIO is floating during reset.
-* Use relay drivers compatible with 3.3 V GPIO logic, with an independent
-  hardware OFF state during startup and reset. Verify that the assumed
-  active-low polarity matches the actual relay board.
-* A dashboard state is the last commanded relay state, **not** electrical
-  feedback; IR reception is not confirmed. Physical switch updates no longer
-  wait for the heartbeat, but Wi-Fi latency, a pending registration response,
-  or a disconnected dashboard can still delay them. A timed-out command may still have reached
-  the node, so check the state before retrying.
-
-## Network security and limitations
-
-The dashboard and nodes use HTTP Basic authentication **without TLS**. Anyone
-able to observe local network traffic may capture credentials and commands.
-Arduino OTA is password-protected but its firmware transfer is not encrypted or
-signed; ESP8266 OTA uses weak MD5-based authentication. The current configs
-reuse the node password for OTA, so change them to strong, distinct passwords.
-Use only a trusted, isolated network; do not expose these ports to the Internet,
-and do not treat this as a secure production control system. The WebSocket on
-port 81 sends refresh notifications only; dashboard data is fetched through
-the authenticated HTTP endpoint. The original standalone sketch remains
-unchanged. The heater's separate 60-minute timeout is independent of the
-entertainment timers.
-
-Before any real load is attached, bench-test every relay output with a safe
-low-voltage indicator, test switch changes and reset behavior, verify every IR
-command, test disconnect/reconnect in both directions, and verify the heater
-timeout and independent protection. Replace any credentials already exposed
-in older sketches before deploying.
