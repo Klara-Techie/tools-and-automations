@@ -61,20 +61,16 @@ The previous neon theme, including the captain name and pirate flag, is saved
 unchanged in [themes/NeonBedroom/dashboard.h](themes/NeonBedroom/dashboard.h).
 To restore it, copy that file over `Master/dashboard.h`, then upload only the
 master sketch. That historical backup does not include the new knob-lighting
-controls. The active theme uses original pirate-inspired styling with
-local fonts and CSS/SVG artwork; it needs no external images or Internet access.
-The full ship and moon form a compact, centered emblem with smaller Black Pearl
-lettering and no promotional tagline. Opaque shaded sails replace the wireframe
-look, and the water runs into the wordmark. Neither mobile nor desktop layouts
-crop the ship or moon.
-The dashboard is mobile-first: compact two-column appliance cards, full-width
-volume rows and a smaller static ship emblem. The charcoal/silver theme uses
-local outline SVG appliance symbols instead of emoji. ON icons stay light on
-a dark background, with a matching status badge and a tinted card; All on and
-START use muted dark fills rather than bright highlights. Controls retain
-44-pixel tap targets and 16-pixel mobile form text. Hover lifts, transitions,
-press-flash timers and vibration are removed; live status, countdowns and knob
-auto-save remain. Decorative LED firmware patterns are unchanged.
+controls. The active theme uses pirate-inspired styling with local fonts and
+CSS/SVG artwork; it needs no external images or Internet access. A compact
+header combines the captain's name, skull emblem, Black Pearl wordmark, and
+ship and moon artwork.
+The dashboard is mobile-first: two-column appliance cards and full-width
+volume rows. Cards use coloured outlines, icons and glowing status indicators
+to distinguish ON devices; All on and START use muted dark fills. Controls
+retain 44-pixel tap targets and 16-pixel mobile form text. Live status,
+countdowns and knob auto-save remain. Decorative LED firmware patterns are
+unchanged.
 The Entertainment power tile places equally sized All on/off, minutes and
 START/CANCEL ALL controls in a single row beneath its heading.
 Volume-command progress/results appear beside the corresponding channel name

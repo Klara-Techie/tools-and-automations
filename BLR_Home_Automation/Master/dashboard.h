@@ -6,7 +6,7 @@ const char DASHBOARD[] PROGMEM = R"HOMEHTML(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0b0c0f">
+<meta name="theme-color" content="#090e1b">
 <title>Black Pearl · Bedroom</title>
 <style>
 :root{
@@ -188,15 +188,98 @@ h1{font:clamp(17px,4.6vw,23px)/1.25 Georgia,"Times New Roman",serif;letter-spaci
   .level:last-child{border-right:0}
   .level-actions{margin-top:8px;width:100%}
 }
+:root{--bg:#090e1b;--surface:#102431;--surface-elev:#193442;--line:#344053;--text:#f7f5fa;--muted:#a9b5c8;--accent:#92ecda;--sand:#ffc984;--sea:#82e8d8;--lilac:#d3b5ff;--danger:#ff8e9b}
+body{font:14px/1.5 "Segoe UI",-apple-system,BlinkMacSystemFont,Arial,sans-serif;background:radial-gradient(ellipse at 15% 0%,#233250 0,transparent 36%),radial-gradient(ellipse at 95% 20%,#2b1d3d 0,transparent 37%),var(--bg)}
+main{max-width:1100px;padding:24px 20px 52px}
+header{border:0;padding:0;justify-content:space-between;gap:12px}
+.brand{gap:13px}
+.logo{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#4c4269,#243c50);border-color:#6f708d;color:#ffddaa;box-shadow:0 6px 24px rgba(58,204,190,.12)}
+.hero{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,40%);align-items:center;
+  gap:8px;min-height:0;margin:0 0 30px;padding:20px 24px;text-align:left;
+  border:1px solid #596078;border-radius:24px;
+  background:radial-gradient(circle at 75% 20%,rgba(113,225,211,.25),transparent 33%),radial-gradient(circle at 15% 110%,rgba(251,170,155,.2),transparent 46%),linear-gradient(120deg,#302c4a,#1a3945 72%,#142b3a);
+  box-shadow:0 20px 50px #0004;
+}
+.hero header{grid-column:1/-1;width:100%;padding-bottom:10px;border-bottom:1px solid #ffffff25}
+.hero h1{font:600 clamp(17px,3vw,23px)/1.2 "Trebuchet MS","Segoe UI",sans-serif;letter-spacing:-.03em;color:#fff4ea}
+.hero-copy{position:relative;z-index:2;max-width:420px}
+.hero-copy h2{margin:0;font:italic clamp(34px,6vw,52px)/1 Georgia,serif;letter-spacing:-.04em;color:#fff4ea}
+.voyage-lockup{width:100%;max-width:240px;align-self:center;justify-self:center}
+.voyage-art{filter:saturate(1.3) brightness(1.3)}
+.section{margin-top:30px}
+.section-head{margin-bottom:13px}
+.section-head h2,.knob-head h2{font:600 19px/1.2 "Segoe UI",sans-serif;letter-spacing:-.03em;color:#f8f6fc}
+.section:has(.remote) .section-head h2,.section:has(#otherDevices) .section-head h2{color:#f8f6fc}
+.section-head h2::after{content:"";display:inline-block;vertical-align:middle;width:6px;height:6px;margin-left:10px;border-radius:50%;background:var(--sand)}
+.section:has(.remote) .section-head h2::after{background:var(--lilac)}
+.section:has(#otherDevices) .section-head h2::after{background:var(--sea)}
+.tag{padding:6px 10px;border-radius:100px;background:#ffffff0a;border-color:#ffffff20;color:#b9c9d6;letter-spacing:.07em}
+.grid{gap:12px}
+.card,.master-panel,.remote,.knob-panel{border:1px solid #ffffff1a;border-radius:18px;background:linear-gradient(145deg,#222c3c,#192231);box-shadow:0 12px 28px #0002,inset 0 1px #ffffff08}
+.card{--device-accent:#58d9d0;padding:16px;min-height:115px;border-top:1px solid #ffffff26;transition:background .2s,border-color .2s,transform .2s}
+.card:nth-child(4n+2){--device-accent:#c3a3ff}
+.card:nth-child(4n+3){--device-accent:#f3c879}
+.card:nth-child(4n+4){--device-accent:#ff8e9b}
+.card.is-on{border-color:var(--device-accent);background:linear-gradient(145deg,#273346,#192534)}
+@supports (color:color-mix(in srgb,red,transparent)){
+  .card.is-on{border-color:color-mix(in srgb,var(--device-accent) 48%,#394258);background:radial-gradient(circle at 12% 0%,color-mix(in srgb,var(--device-accent) 20%,transparent),transparent 56%),linear-gradient(145deg,#273346,#192534)}
+  .icon.on{background:color-mix(in srgb,var(--device-accent) 18%,#263349);border-color:color-mix(in srgb,var(--device-accent) 65%,transparent)}
+  .status.on{background:color-mix(in srgb,var(--device-accent) 10%,transparent);border-color:color-mix(in srgb,var(--device-accent) 35%,transparent)}
+}
+.card h3{margin:13px 0 0;font-size:15px;letter-spacing:-.01em}
+.icon{width:50px;height:50px;border-radius:16px;background:#ffffff0b;border-color:#ffffff17;color:#b5c6d8}
+.icon.on{color:var(--device-accent);box-shadow:0 0 18px color-mix(in srgb,var(--device-accent) 15%,transparent)}
+.status{display:inline-flex;align-items:center;gap:6px;border-radius:100px;padding:5px 9px;background:#ffffff08;color:#a9b5c8}
+.status::before{content:"";width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#69788a}
+.status.on{color:var(--device-accent)}
+.status.on::before{background:var(--device-accent);box-shadow:0 0 8px var(--device-accent)}
+.timer{margin-top:15px;padding-top:13px;border-color:#ffffff17}
+.timer-row{gap:8px}
+.timer-row input,.timer-row .countdown,.knob-fields input[type=color],.knob-fields select{border-radius:10px;border-color:#ffffff20;background:#111b2a}
+button{border-radius:11px;transition:filter .15s,transform .15s,border-color .15s}
+button:active:not(:disabled){transform:scale(.97)}
+.timer-row .start,.primary{background:#263f46;border-color:#528578;color:#d4f7ea;font-weight:700}
+.timer-row .cancel{border-color:#f8a5ae55;background:#573540;color:#ffd2d4}
+.master-panel{border-left:3px solid #ffc984;padding:16px;margin-bottom:12px}
+.master-copy strong{font-size:15px}
+.master-copy .muted{color:#bfccda}
+.primary.is-active{background:#493b40;border-color:#a57971;color:#ffe1cc}
+.remote{border-top:1px solid #d3b5ff60}
+.level{padding:14px;border-color:#ffffff14}
+.level-feedback{border-color:#45616d;color:#b8d8dd}
+.level-actions{width:108px;border-color:#ffffff16;border-radius:11px;background:#101b2a}
+.level-actions button+button{border-color:#294654}
+.level-actions button:last-child{background:#ba9ee52b;color:#e7d7ff}
+.level-actions button:active:not(:disabled){background:#285563;color:#f5ffff}
+.knob-panel{padding:19px;border-top:1px solid #82e8d860}
+.knob-head{margin-bottom:18px}
+.knob-head p{color:#a9b5c8}
+.knob-ring::before{background:#243344;border-color:#657b88}
+.knob-ring.is-on .knob-pixel{box-shadow:0 0 10px var(--ring-color)}
+.knob-brightness input{accent-color:var(--sea)}
+@media(hover:hover) and (pointer:fine){.card:hover{transform:translateY(-2px)}button:hover:not(:disabled){border-color:var(--accent);filter:brightness(1.13)}}
+@media(max-width:600px){
+  main{padding:18px 14px 40px}
+  .hero{padding:14px 18px;gap:6px;border-radius:20px}
+  .hero h1{font-size:17px}
+  .hero-copy h2{font-size:32px}
+  .voyage-lockup{max-width:160px}
+  .section{margin-top:25px}
+  .card{padding:12px}
+  .icon{width:46px;height:46px}
+  .card h3{font-size:14px}
+  .level{padding:10px 12px}
+}
+@media(max-width:350px){.hero-copy h2{font-size:29px}.timer-row{grid-template-columns:minmax(0,1fr) 58px}}
 </style>
 </head>
 <body><main>
-<header><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m16 8-2 6-6 2 2-6Zm-4-7v3m0 16v3M1 12h3m16 0h3"/></svg></div><div><div class="eyebrow">Black Pearl</div><h1>Captain Karthik Sparroww 🏴‍☠️</h1></div></div></header>
 <div class="hero">
-  <div class="eyebrow hero-kicker">Aboard the</div>
+  <header><div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10a7 7 0 0 1 14 0c0 2.4-1.1 3.9-2.7 4.8V19H7.7v-4.2C6.1 13.9 5 12.4 5 10Z"/><circle cx="9" cy="10.5" r="1.25"/><circle cx="15" cy="10.5" r="1.25"/><path d="m12 13-1 1.5h2L12 13ZM9.7 19v-2m4.6 2v-2M3 19l3 2m15-2-3 2"/></svg></div><div><h1>Captain Karthik Sparroww 🏴‍☠️</h1></div></div></header>
+  <div class="hero-copy"><h2>Black Pearl</h2></div>
   <div class="voyage-lockup">
-  <h2 class="voyage-name"><span>Black</span> <span>Pearl</span></h2>
-  <svg class="voyage-art" viewBox="0 0 520 340" aria-hidden="true" focusable="false">
+  <svg class="voyage-art" viewBox="75 0 385 255" aria-hidden="true" focusable="false">
     <defs>
       <radialGradient id="moonGlow"><stop stop-color="#b9e2ef" stop-opacity=".2"/><stop offset="1" stop-color="#b9e2ef" stop-opacity="0"/></radialGradient>
       <linearGradient id="moonReflection" x2="0" y2="1"><stop stop-color="#99d5df" stop-opacity=".22"/><stop offset="1" stop-color="#99d5df" stop-opacity="0"/></linearGradient>
