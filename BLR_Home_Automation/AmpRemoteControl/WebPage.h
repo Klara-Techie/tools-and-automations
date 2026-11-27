@@ -35,10 +35,10 @@ h1{font-size:clamp(25px,7vw,34px);letter-spacing:-.045em;margin:4px 0 5px}
 .hero{position:relative;overflow:hidden;padding:20px 18px 18px}.hero:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-115px;top:-150px;background:#56c8f51a;pointer-events:none}
 .herohead{display:flex;justify-content:space-between;align-items:center;gap:10px;position:relative}
 .pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:10px;color:var(--muted);background:#091a2a}
-.volume-wrap{display:grid;place-items:center;padding:19px 0 14px;position:relative}
-.volume-ring{width:min(66vw,250px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--blue) var(--level,0%),#24445f 0);padding:8px;box-shadow:0 0 0 1px #56c8f526,0 0 44px #56c8f51c}
+.volume-wrap{display:grid;place-items:center;padding:12px 0 10px;position:relative}
+.volume-ring{width:min(50vw,190px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--blue) var(--level,0%),#24445f 0);padding:8px;box-shadow:0 0 0 1px #56c8f526,0 0 44px #56c8f51c}
 .volume-ring:before{content:"";position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#173650,#0a1b2b 72%)}
-.volume-inner{position:relative;text-align:center}.volume-number{font-size:clamp(54px,15vw,76px);font-weight:760;letter-spacing:-.075em;line-height:1;font-variant-numeric:tabular-nums}
+.volume-inner{position:relative;text-align:center}.volume-number{font-size:clamp(42px,11vw,56px);font-weight:760;letter-spacing:-.075em;line-height:1;font-variant-numeric:tabular-nums}
 .volume-unit{font-size:11px;color:var(--blue);font-weight:800;letter-spacing:.15em;margin-top:5px}.volume-caption{font-size:11px;color:var(--muted);margin-top:7px}
 input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer}
 .volume-slider{margin:7px 0 0}
@@ -82,7 +82,7 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 .navitem{display:grid;justify-items:center;gap:4px;padding:7px 3px;border:0;background:transparent;color:#a6bbc9;font-size:9px;font-weight:750;text-decoration:none}
 .navitem b{font-size:17px;font-weight:500}.navitem:focus,.navitem:hover{color:var(--blue)}
 @media(min-width:680px){body{padding-bottom:28px}.app{padding:0 24px}.bottomnav{display:none}.hero{padding:22px}}
-@media(max-width:360px){.app{padding:0 12px}.card{padding:14px}.channel{padding:11px}.volume-ring{width:min(63vw,220px)}.topbar{flex-wrap:wrap}}
+@media(max-width:360px){.app{padding:0 12px}.card{padding:14px}.channel{padding:11px}.topbar{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style></head>
 <body><div class="app">
@@ -204,6 +204,7 @@ function field(id,value){if(document.activeElement!==$(id))$(id).value=value}
 function button(id,on){$(id).classList.toggle('active',on);$(id).setAttribute('aria-pressed',String(on))}
 function channelMuteButton(id,on,masterMuted){button(id,on);$(id).classList.toggle('active',masterMuted||on);$(id).title=masterMuted?'Master mute is on; this button controls the channel mute setting.':''}
 function render(data){snapshot=data;const s=data.state;
+ if(data.masterUrl)document.querySelector('.master-link').href=data.masterUrl;
  renderLights(data.knobLights);
  $('connection').textContent='ESP32 CONNECTED';$('connection').className='connection status';
  $('warning').textContent=data.warning+(data.pendingSave?' Settings save pending.':'');

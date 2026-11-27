@@ -250,6 +250,9 @@ void handleState() {
   json += ",\"receiverOnline\":";
   json += receiverOnline && WiFi.status() == WL_CONNECTED &&
           (entertainment.stateMask() & 2) ? "true" : "false";
+  json += ",\"receiverUrl\":\"http://";
+  json += RECEIVER_IP.toString();
+  json += "/\"";
   json += "}";
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "application/json", json);

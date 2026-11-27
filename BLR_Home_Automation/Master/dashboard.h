@@ -339,13 +339,13 @@ function updateCountdowns(){
   }
   setTimerControls(document.querySelector('.master-timer .timer-row'),allReady,any,allSeconds,anyOn);
 }
-function renderReceiverLink(online){
+function renderReceiverLink(online,url){
   const link=document.querySelector('.receiver-link');
   link.classList.toggle('is-online',online);
   link.setAttribute('aria-disabled',String(!online));
   link.setAttribute('aria-label',online?'AVR control':'AVR control, receiver offline');
   link.title=online?'Open receiver controls (home Wi-Fi required)':'Receiver offline or amplifier power is off';
-  if(online)link.setAttribute('href','/receiver');else link.removeAttribute('href');
+  if(online)link.setAttribute('href',url||'/receiver');else link.removeAttribute('href');
 }
 function render(data){
   latest=data;receivedAt=Date.now();
@@ -365,7 +365,7 @@ function render(data){
   document.getElementById('allToggle').setAttribute('aria-label',(allOn?'Turn off ':'Turn on ')+'TV, amplifier and LED strip');
   document.getElementById('allToggle').classList.toggle('is-active',allOn);
   const amp=data.devices.find(x=>x.id===1);
-  renderReceiverLink(!!(data.receiverOnline&&amp&&amp.online&&amp.configured&&amp.on));
+  renderReceiverLink(!!(data.receiverOnline&&amp&&amp.online&&amp.configured&&amp.on),data.receiverUrl);
   updateCountdowns();
 }
 async function refresh(){

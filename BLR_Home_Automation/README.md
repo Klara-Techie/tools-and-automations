@@ -149,8 +149,11 @@ using those nodes' hotspot addresses.
   consecutive failed checks before marking a previously online receiver
   offline. Turning the amplifier relay off or losing the master's home Wi-Fi
   disables the link without waiting for failed probes. Network failure or a
-  receiver restart can delay the status change. The check confirms the web service is reachable,
-  not that the audio hardware is functioning.
+  receiver restart can delay the status change. Navigation links use direct
+  addresses to avoid an extra redirect. The button reflects the last reported
+  status, so a recently disconnected receiver may briefly remain clickable.
+  The check confirms the web service is reachable, not that the audio hardware
+  is functioning.
 * Phone on `Home-Automation`: open `http://192.168.4.1/`, with or without home Wi-Fi.
   If the phone warns that this network has no Internet, choose to stay connected.
   The receiver link requires a route to the home router network and normally

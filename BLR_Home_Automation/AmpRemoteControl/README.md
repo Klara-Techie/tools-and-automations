@@ -36,14 +36,16 @@ the receiver's recovery hotspot directly. The receiver is an independent web
 server, not a proxied master API, and does not register with the master.
 The master enables its AVR link only when amplifier power is on and the
 receiver's `/api/health` endpoint responds over home Wi-Fi. This is a web
-service check, not confirmation of the audio hardware.
+service check, not confirmation of the audio hardware. Navigation uses direct
+addresses to avoid an extra redirect; the master button reflects the last
+reported status and may briefly remain clickable after a disconnect.
 The receiver's **Master dashboard** link uses `MASTER_IP` from its `config.h`;
 keep it synchronized with the master configuration. It also requires a route
 to the master on the home network.
 Moving the firmware to a different ESP32 does not transfer NVS settings or
 presets. Export audio settings from the previous receiver before moving, then
-restore the backup on the new device; presets and Wi-Fi must be configured
-again. Backups restore muted.
+restore the backup on the new device; presets must be configured again.
+Home Wi-Fi credentials come from the uploaded `config.h`. Backups restore muted.
 
 The receiver page also controls the two decorative WS2812B knob rings. They
 start off and their settings are held in RAM only; see the home automation

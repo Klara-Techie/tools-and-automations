@@ -96,6 +96,7 @@ void handleState() {
   doc["homeStatus"] = homeNetwork.status();
   doc["homeConfigured"] = homeNetwork.configured();
   doc["homeAddress"] = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "";
+  doc["masterUrl"] = String("http://") + MASTER_IP.toString() + "/";
   JsonObject lights = doc.createNestedObject("knobLights");
   lights["available"] = knobLights.ready();
   lights["on"] = knobLights.settings().on;
