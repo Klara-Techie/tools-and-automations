@@ -227,32 +227,6 @@ void handlePreset() {
   reply(200, "text/plain", "Presets saved");
 }
 
-void handleNetwork() {
-  if (!authorized()) { reply(403, "text/plain", "Not authorized"); return; }
-  String body = server.arg("plain");
-  if (body.length() > 1024) { reply(413, "text/plain", "Request too large"); return; }
-  DynamicJsonDocument doc(2048);
-  if (deserializeJson(doc, body) || !doc["action"].is<const char *>()) {
-    reply(400, "text/plain", "Invalid network settings");
-    return;
-  }
-  String error;
-  const String action = doc["action"].as<String>();
-  bool ok = false;
-  if (action == "save" && doc["ssid"].is<const char *>() &&
-      doc["password"].is<const char *>()) {
-    ok = homeNetwork.configure(storage, doc["ssid"].as<String>(),
-                               doc["password"].as<String>(), error);
-  } else if (action == "clear") {
-    ok = homeNetwork.clear(storage, error);
-  } else {
-    error = "Invalid network settings";
-  }
-  if (!ok) { reply(400, "text/plain", error); return; }
-  ++revision;
-  reply(200, "text/plain", "Network settings saved");
-}
-
 void saveIfDue() {
   if (!dirty || millis() - changedAt < 2000) return;
   DynamicJsonDocument doc(4096);
@@ -359,12 +333,11 @@ void setup() {
   server.on("/api/state", HTTP_GET, handleState);
   server.on("/api/state", HTTP_POST, handleUpdate);
   server.on("/api/presets", HTTP_POST, handlePreset);
-  server.on("/api/network", HTTP_POST, handleNetwork);
   server.on("/api/knob-lights", HTTP_POST, handleKnobLights);
   server.onNotFound([]() { reply(404, "text/plain", "Not found"); });
   server.begin();
   Serial.println("[INFO] Receiver web server started on port 80");
-  homeNetwork.begin(storage);
+  homeNetwork.begin();
   ota.configure("home-amp-remote", OTA_PASSWORD, []() {
     knobLights.off();
     AudioState muted = audio.state();

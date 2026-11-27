@@ -132,9 +132,8 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 </div></details>
 <details class="advanced"><summary>Backup and restore</summary><div class="advancedbody"><div class="row-actions"><button id="backup" class="action-btn" type="button">Download backup</button><button id="restoreFile" class="action-btn" type="button">Restore backup</button></div><div class="notice">Backups contain audio settings, not presets or Wi-Fi credentials.</div><input id="file" type="file" accept=".json,application/json" hidden></div></details>
 <details class="advanced"><summary>Home Wi-Fi connection</summary><div class="advancedbody">
-<div id="homeStatus" class="notice"></div><div class="field"><label for="homeSsid">Wi-Fi network name</label><input id="homeSsid" type="text" maxlength="32" autocomplete="off"></div><div class="field"><label for="homePassword">Wi-Fi password</label><input id="homePassword" type="password" maxlength="64" autocomplete="new-password"></div>
-<div class="row-actions"><button id="homeSave" class="action-btn" type="button">Connect</button><button id="homeClear" class="action-btn" type="button">Forget network</button></div>
-<div class="notice">Configure from the receiver's access point. Reserve the fixed address in your router. Home-network control uses unencrypted HTTP.</div>
+<div id="homeStatus" class="notice"></div>
+<div class="notice">Home Wi-Fi is configured in the receiver firmware. Reserve the fixed address in your router. Home-network control uses unencrypted HTTP.</div>
 </div></details></section></div>
 <nav class="bottomnav" aria-label="Quick navigation"><div class="navinner"><a class="navitem" href="#volumeSection"><b aria-hidden="true">◉</b>Volume</a><a class="navitem" href="#speakersSection"><b aria-hidden="true">◫</b>Speakers</a><a class="navitem" href="#toneSection"><b aria-hidden="true">〰</b>Tone</a><a class="navitem" href="#moreSection"><b aria-hidden="true">⋯</b>More</a></div></nav>
 <script>
@@ -273,8 +272,6 @@ $('presetUpdate').onclick=()=>{const name=$('preset').value;if(name)presetAction
 $('presetCreate').onclick=()=>presetAction('create',$('presetName').value.trim());
 $('presetRename').onclick=()=>{const name=$('preset').value;if(name)presetAction('rename',name,$('presetName').value.trim())};
 $('presetDelete').onclick=()=>{const name=$('preset').value;if(name&&confirm('Delete the selected preset?'))presetAction('delete',name)};
-$('homeSave').onclick=()=>{const ssid=$('homeSsid').value,password=$('homePassword').value;$('homePassword').value='';enqueue(()=>({path:'/api/network',body:{action:'save',ssid,password}}))};
-$('homeClear').onclick=()=>{if(confirm('Forget the home Wi-Fi network?'))enqueue(()=>({path:'/api/network',body:{action:'clear'}}))};
 $('backup').onclick=async()=>{try{const data=await get();const url=URL.createObjectURL(new Blob([JSON.stringify(data.state,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='receiver-settings.json';a.click();URL.revokeObjectURL(url)}catch(e){$('warning').textContent=e.message}};
 $('restoreFile').onclick=()=>$('file').click();
 $('file').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>4096)throw Error('Backup is too large');const restored=JSON.parse(await f.text());restored.mute=true;change(s=>{Object.assign(s,restored);s.lrMulti=true;s.surroundMulti=true;s.rec=false})}catch(err){$('warning').textContent='Backup error: '+err.message}finally{e.target.value=''}};

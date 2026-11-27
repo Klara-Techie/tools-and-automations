@@ -10,15 +10,15 @@ audio path have been verified with suitable equipment.
 
 1. Install the Espressif ESP32 board package, ArduinoJson 6.21.5 and Adafruit
    NeoPixel, and install the home automation `HomeNodeNetwork` library.
-2. Open `AmpRemoteControl.ino` from this folder, select the actual
-   ESP32 board and port, then compile and upload.
+2. Set `HOME_SSID` and `HOME_PASSWORD` in `config.h` to the home router
+   credentials, matching the master. Open `AmpRemoteControl.ino` from this
+   folder, select the actual ESP32 board and port, then compile and upload.
 3. Check the [FR6311 wiring](#fr6311-control-wiring) and verify the complete
    analog circuit and supply against the datasheet before applying power.
-4. Open Serial Monitor at 115200 baud. Connect to the `AV-Receiver` access point
-   using the randomly generated password printed there, and open the printed
-   IP address (`192.168.5.1`). To connect to home Wi-Fi, enter the SSID and password under
-   Advanced > Home Wi-Fi while connected to this access point. Do not put
-   Wi-Fi credentials in the sketch or a committed file.
+4. The receiver connects to home Wi-Fi automatically. On the same network,
+   open `http://192.168.31.201/`. For recovery, open Serial Monitor at 115200
+   baud, connect to the `AV-Receiver` access point using its randomly generated
+   password printed there, and open `http://192.168.5.1/`.
 
 The receiver first uses DHCP to discover the gateway, subnet and DNS, then
 reconnects using the requested fixed address `192.168.31.201`. Reserve that
@@ -50,12 +50,12 @@ start off and their settings are held in RAM only; see the home automation
 README for pinout, patterns, supply and wiring. Configure an OTA password in
 `config.h`; OTA turns off the rings and requests mute before an update.
 
-Wi-Fi credentials are stored in ESP32 NVS, not in the sketch or backup. Unless
-the device is separately configured with flash encryption, that storage is
-not encrypted. The interface uses HTTP without transport encryption or
-individual user accounts; devices with network access can control the receiver.
-Enter credentials only through a trusted connection to the receiver's WPA2
-access point, and keep both network passwords private.
+Home Wi-Fi credentials are compiled into the firmware from `config.h`; keep
+them private and do not commit them. Previously saved home Wi-Fi credentials
+are ignored but remain in ESP32 NVS. Flash contents and NVS are not encrypted
+unless the device is separately configured with flash encryption. The interface
+uses HTTP without transport encryption or individual user accounts; devices
+with network access can control the receiver.
 
 ### Connection troubleshooting
 
@@ -72,9 +72,9 @@ cable and power, and any board-specific USB CDC settings. Verify this receiver
 sketch was uploaded, then reset the board with the monitor open. Early storage,
 audio initialization or access-point errors stop startup and are printed to
 serial. The receiver AP is `AV-Receiver` at `http://192.168.5.1/`; connect to
-it directly for initial home Wi-Fi setup. On home Wi-Fi, use the home IP
-reported in the log. Home credentials must be configured on the receiver page;
-the master node's settings do not automatically configure the receiver.
+it directly for recovery. On home Wi-Fi, use the home IP reported in the log.
+Home credentials must be configured in the receiver's `config.h`; the master
+node's settings do not automatically configure the receiver.
 
 The interface uses a 0-60 volume scale across the chip's -99 to 0 dB
 attenuation range, rounded to the nearest supported hardware setting. Level 0

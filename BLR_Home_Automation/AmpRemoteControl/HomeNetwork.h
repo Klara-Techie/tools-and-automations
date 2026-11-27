@@ -1,16 +1,12 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Preferences.h>
 #include <WiFi.h>
 
 class HomeNetwork {
  public:
-  void begin(Preferences &storage);
+  void begin();
   void tick();
-  bool configure(Preferences &storage, const String &ssid, const String &password,
-                 String &error);
-  bool clear(Preferences &storage, String &error);
   bool configured() const { return ssid_.length() != 0; }
   const String &status() const { return status_; }
 

@@ -1,8 +1,6 @@
 #include "HomeNetwork.h"
 #include "config.h"
 
-#include <ArduinoJson.h>
-
 namespace {
 const IPAddress kReceiverAddress = RECEIVER_IP;
 const uint32_t kConnectionTimeoutMs = 20000;
@@ -41,21 +39,15 @@ bool HomeNetwork::validCredentials(const String &ssid, const String &password) {
   return true;
 }
 
-void HomeNetwork::begin(Preferences &storage) {
+void HomeNetwork::begin() {
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
-  if (!storage.isKey("network")) return;
-  String encoded = storage.getString("network", "");
-  DynamicJsonDocument doc(1024);
-  if (deserializeJson(doc, encoded) || !doc["ssid"].is<const char *>() ||
-      !doc["password"].is<const char *>()) {
-    status_ = "Saved home Wi-Fi settings are invalid";
-    return;
-  }
-  String ssid = doc["ssid"].as<String>();
-  String password = doc["password"].as<String>();
-  if (!validCredentials(ssid, password)) {
-    status_ = "Saved home Wi-Fi settings are invalid";
+  const String ssid = HOME_SSID;
+  const String password = HOME_PASSWORD;
+  if (ssid.startsWith("REPLACE_") || password.startsWith("REPLACE_") ||
+      !validCredentials(ssid, password)) {
+    status_ = "Home Wi-Fi settings in config.h are invalid";
+    Serial.println("[ERROR] Home Wi-Fi settings in config.h are invalid");
     return;
   }
   ssid_ = ssid;
@@ -126,38 +118,4 @@ void HomeNetwork::tick() {
     return;
   }
   if (elapsed >= kConnectionTimeoutMs) retry("Home Wi-Fi connection timed out; retrying");
-}
-
-bool HomeNetwork::configure(Preferences &storage, const String &ssid,
-                            const String &password, String &error) {
-  if (!validCredentials(ssid, password)) {
-    error = "SSID must be 1-32 bytes; password must be 8-63 bytes or 64 hex digits.";
-    return false;
-  }
-  DynamicJsonDocument doc(1024);
-  doc["ssid"] = ssid;
-  doc["password"] = password;
-  String encoded;
-  if (doc.overflowed() || !serializeJson(doc, encoded) ||
-      storage.putString("network", encoded) != encoded.length()) {
-    error = "Could not save home Wi-Fi settings.";
-    return false;
-  }
-  ssid_ = ssid;
-  password_ = password;
-  discover();
-  return true;
-}
-
-bool HomeNetwork::clear(Preferences &storage, String &error) {
-  if (storage.isKey("network") && !storage.remove("network")) {
-    error = "Could not remove home Wi-Fi settings.";
-    return false;
-  }
-  WiFi.disconnect(false, false);
-  ssid_ = "";
-  password_ = "";
-  phase_ = Phase::Unconfigured;
-  status_ = "Home Wi-Fi not configured";
-  return true;
 }

@@ -36,8 +36,8 @@ The receiver has its own web interface and controls the FR6311 directly, not by 
    `RoomSwitchControl`, and `BathRoomSwitchControl`, edit the private `config.h`.
    Open each `.ino` from its own folder. Set matching master-hotspot
    `AP_SSID`, `AP_PASSWORD`, `AP_IP` and `NODE_PASSWORD` in the master,
-   room and bathroom files. The receiver uses its own Wi-Fi setup, described
-   in [its README](AmpRemoteControl/README.md). Set a
+   room and bathroom files. Set the receiver's home Wi-Fi credentials in its
+   own `config.h`, as described in [its README](AmpRemoteControl/README.md). Set a
    dashboard username and password in the master. Set an `OTA_PASSWORD` of at
    least eight characters on each board; the current configs use `NODE_PASSWORD`
    for OTA, but separate strong passwords are recommended. Keep private configs
