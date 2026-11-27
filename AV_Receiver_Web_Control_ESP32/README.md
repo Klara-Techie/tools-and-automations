@@ -1,0 +1,137 @@
+# ESP32 / FR6311 receiver controller
+
+This is an **initial, incomplete implementation**. It is not a production-ready
+receiver and has not been tested on the hardware. Whole-receiver factory reset
+and a channel identification sequence are not implemented.
+Do not connect an amplifier or speakers until the serial waveform and the full
+audio path have been verified with suitable equipment.
+
+## Arduino IDE
+
+1. Install the Espressif ESP32 board package and ArduinoJson 6.21.5 with the
+   IDE's Boards Manager and Library Manager.
+2. Open `AV_Receiver_Web_Control_ESP32.ino` from this folder, select the actual
+   ESP32 board and port, then compile and upload.
+3. Power the FR6311 separately and establish a common ground before starting
+   the ESP32. DATA is GPIO16 to FR6311 pin 13, CLOCK is GPIO17 to pin 14, and
+   DGND is pin 12. Verify the complete analog circuit and 9 V supply against
+   the datasheet.
+4. Open Serial Monitor at 115200 baud. Connect to the `AV-Receiver` access point
+   using the randomly generated password printed there, and open the printed
+   IP address. To connect to home Wi-Fi, enter the SSID and password under
+   Advanced > Home Wi-Fi while connected to this access point. Do not put
+   Wi-Fi credentials in the sketch or a committed file.
+
+The receiver first uses DHCP to discover the gateway, subnet and DNS, then
+reconnects using the requested fixed address `192.168.31.200`. Reserve that
+address for this receiver or exclude it from the router's DHCP pool; automatic
+IP conflict detection is not provided. If the discovered subnet does not
+contain that address, the home connection cannot be configured. The receiver
+access point stays available for setup and recovery; station connections can
+briefly interrupt it when the radio changes channel.
+
+Wi-Fi credentials are stored in ESP32 NVS, not in the sketch or backup. Unless
+the device is separately configured with flash encryption, that storage is
+not encrypted. The interface uses HTTP without transport encryption or
+individual user accounts; devices with network access can control the receiver.
+Enter credentials only through a trusted connection to the receiver's WPA2
+access point, and keep both network passwords private.
+
+The interface uses a 0-60 volume scale across the chip's -99 to 0 dB
+attenuation range, rounded to the nearest supported hardware setting. Level 0
+is the lowest level, not mute. Each UI step is approximately 1.65 dB; hardware
+ramping still uses 1 dB steps. Bass and treble use a 0-14 scale where 7 is
+flat, each step corresponds to 2 dB, and the endpoints are -14 and +14 dB.
+Fresh settings default to volume 25, bass 7, treble 7, and 0 dB input and
+channel output gain. Existing saved settings are not reset to these defaults.
+
+L/R and C/SW/SL/SR are routed from the decoder's six analog outputs through
+their respective volume controls. At startup, older saved routing is changed to
+the 5.1 multichannel input and REC is disabled. Other routing options are not
+available in this configuration. Backup restores also retain 5.1 routing and
+leave REC disabled. The receiver starts muted and respects saved mute and volume
+settings. Verify the wiring and all six outputs on hardware.
+
+HDMI, coaxial and optical source switching has not been implemented or shown
+in the interface. Their digital audio requires suitable external
+decoding/conversion to six analog channels; the FR6311 cannot decode those
+signals.
+
+The sketch initializes all four formats muted, then ramps up if the saved
+state was unmuted. It remembers settings in ESP32 NVS and attempts to save each
+accepted change immediately; save errors are displayed and retried. A power
+loss during a failed or interrupted flash write can still lose the latest
+change. If last-volume restore is disabled, the configured startup volume is
+used instead of the previous master level. The saved mute state is restored in
+either case. Maximum volume limits attenuation only, not the separate input
+and output gains. Changes from multiple browsers are checked against a state
+revision. Backups contain audio settings, not presets or Wi-Fi credentials.
+
+New installations start with no presets. To create one, adjust the speaker
+levels and L/R tone, open Listening presets, enter a name, and select Create.
+The preset saves current channel trims, gains, mutes and L/R tone. Selecting a
+saved preset applies it after confirmation; close the section manually.
+The displayed selection is local to the current browser page and resets on
+reload, while audio settings and presets remain stored on the receiver.
+Reapply, update, rename or delete a selected preset. Existing
+saved presets, including older starter presets, are retained and can be
+deleted individually. Applying one keeps the current master volume and input,
+but channel gains and tone can still change loudness. Output-gain increases are preceded by extra attenuation where
+possible, followed by a ramp; attenuation cannot exceed the chip's 99 dB
+limit. Up to 16 presets can be stored. Presets are software snapshots, not
+FR6311 DSP effects.
+
+Volume changes ramp in 1 dB steps. The interval is configurable from 5 to
+1000 ms per step (default 20 ms) in the advanced volume settings, and is
+saved with the configuration. Existing saved settings and backups without an
+interval use the default. A new target replaces the previous target; mute and
+a tighter volume limit take effect immediately. Startup and unmuting begin at
+-99 dB and ramp to the requested level. Channel displays show the last
+requested target and mute status, not a measured audio level. Master and
+channel +/- buttons use the configured volume increment. Tone and gain
+buttons use the FR6311's 2 dB steps; ramp-interval buttons adjust by 5 ms.
+FL/FR and SL/SR are combined by default. If a pair has different levels it
+shows Mixed; adjusting the pair sets both to the same level. Use Individual
+view for separate channel adjustments. Pair mute mutes both if either is
+unmuted, and unmutes both if both were muted. Master mute highlights all
+channel mute buttons without changing their individual mute settings.
+The ramp runs cooperatively in the main loop, so network or storage activity can delay
+steps; it is not a hardware safety interlock. Use an independent amplifier
+mute or disconnect the amplifier for safety-critical situations.
+
+## Hardware limitations and validation
+
+The FR6311 has no serial acknowledgement or readback. The interface reports
+the requested/transmitted settings, not confirmed IC state or measured audio.
+Powering or resetting the FR6311 independently of the ESP32 requires restarting
+the ESP32 so all four formats are resent. Verify actual rising-edge sampling,
+D0-first transmission, latch timing, power-up behavior and all outputs with a
+logic analyzer and a suitable test setup before use. The datasheet's format
+table assigns ADC attenuation to D6/D7, while its ADC setting table labels
+D4/D5; nonzero ADC attenuation is therefore disabled pending verification.
+IN4 uses the specific IN4/REC1-off encoding from the datasheet and cannot be
+combined with REC enabled; verify that interaction on the actual board.
+
+Tone controls affect L/R only. The chip does not provide a test-tone generator,
+meters, DSP modes, decoding, crossover, delays, or room correction. No such
+features are represented as available here.
+
+## Host tests
+
+`tests/FR6311CommandsTest.cpp` is a standalone host C++ test for command
+encodings and validation. `tests/AudioControlTest.cpp` tests ramp timing,
+retargeting, mute and limit priority using a fake transport and clock. For
+example, with a C++ compiler installed:
+
+```
+g++ -std=c++11 -I. tests\FR6311CommandsTest.cpp FR6311Commands.cpp -o fr6311-test.exe
+.\fr6311-test.exe
+g++ -std=c++11 -Itests\fakes -I. tests\AudioControlTest.cpp AudioControl.cpp FR6311Commands.cpp -o audio-control-test.exe
+.\audio-control-test.exe
+```
+
+These tests do not validate electrical timing, analog behavior, or board wiring.
+After uploading, verify preset updates and power-cycle persistence on the real
+device. Also verify home-network connection, the fixed address, loss and
+recovery of home Wi-Fi, and access through the receiver access point. Use a
+safe audio test setup because neither hardware path has been validated yet.
