@@ -30,7 +30,6 @@ bool audioFault = false;
 String audioWarning;
 String presetWarning;
 String lastNetworkStatus;
-uint32_t lastStatusLog = 0;
 
 void saveIfDue();
 
@@ -47,6 +46,12 @@ String randomHex(size_t bytes) {
 }
 
 void reply(int code, const char *type, const String &body) {
+  const String path = server.uri();
+  if (server.method() == HTTP_POST &&
+      (path == "/api/state" || path == "/api/presets" || path == "/api/knob-lights")) {
+    Serial.printf("[%s] Action %s: HTTP %d\n",
+                  code >= 400 ? "WARN" : "INFO", path.c_str(), code);
+  }
   server.sendHeader("Cache-Control", "no-store");
   server.sendHeader("X-Content-Type-Options", "nosniff");
   server.sendHeader("X-Frame-Options", "DENY");
@@ -126,7 +131,66 @@ void handleKnobLights() {
     return;
   }
   knobLights.apply(settings);
+  Serial.printf("[INFO] Requested knob lights: %s, color #%06lx, brightness %u%%, pattern %s\n",
+                settings.on ? "on" : "off", static_cast<unsigned long>(settings.color),
+                static_cast<unsigned>(settings.brightness), KNOB_PATTERNS[settings.pattern]);
   reply(200, "text/plain", "Knob lights updated");
+}
+
+void logAudioChanges(const AudioState &previous, const AudioState &next) {
+  if (previous.masterAttenuation != next.masterAttenuation) {
+    const unsigned oldLevel = ((99 - previous.masterAttenuation) * 60 + 49) / 99;
+    const unsigned newLevel = ((99 - next.masterAttenuation) * 60 + 49) / 99;
+    Serial.printf("[INFO] Requested master volume %s: %u -> %u / 60 (attenuation -%u -> -%u dB)\n",
+                  next.masterAttenuation < previous.masterAttenuation ? "increased" : "decreased",
+                  oldLevel, newLevel, static_cast<unsigned>(previous.masterAttenuation),
+                  static_cast<unsigned>(next.masterAttenuation));
+  }
+  if (previous.masterMuted != next.masterMuted)
+    Serial.printf("[INFO] Requested master mute %s\n", next.masterMuted ? "on" : "off");
+  if (previous.hardware.bass != next.hardware.bass)
+    Serial.printf("[INFO] Requested bass: %d -> %d dB\n",
+                  static_cast<int>(previous.hardware.bass), static_cast<int>(next.hardware.bass));
+  if (previous.hardware.treble != next.hardware.treble)
+    Serial.printf("[INFO] Requested treble: %d -> %d dB\n",
+                  static_cast<int>(previous.hardware.treble), static_cast<int>(next.hardware.treble));
+  if (previous.hardware.toneBypass != next.hardware.toneBypass)
+    Serial.printf("[INFO] Requested tone bypass %s\n", next.hardware.toneBypass ? "on" : "off");
+  if (previous.hardware.inputGain != next.hardware.inputGain)
+    Serial.printf("[INFO] Requested input gain: %u -> %u dB\n",
+                  static_cast<unsigned>(previous.hardware.inputGain),
+                  static_cast<unsigned>(next.hardware.inputGain));
+  if (previous.minimumAttenuation != next.minimumAttenuation)
+    Serial.printf("[INFO] Requested volume limit: %u -> %u / 60\n",
+                  static_cast<unsigned>(((99 - previous.minimumAttenuation) * 60 + 49) / 99),
+                  static_cast<unsigned>(((99 - next.minimumAttenuation) * 60 + 49) / 99));
+  if (previous.startupAttenuation != next.startupAttenuation)
+    Serial.printf("[INFO] Requested startup volume: %u -> %u / 60\n",
+                  static_cast<unsigned>(((99 - previous.startupAttenuation) * 60 + 49) / 99),
+                  static_cast<unsigned>(((99 - next.startupAttenuation) * 60 + 49) / 99));
+  if (previous.volumeStep != next.volumeStep)
+    Serial.printf("[INFO] Requested volume step: %u -> %u\n",
+                  static_cast<unsigned>(previous.volumeStep), static_cast<unsigned>(next.volumeStep));
+  if (previous.rampIntervalMs != next.rampIntervalMs)
+    Serial.printf("[INFO] Requested ramp interval: %u -> %u ms\n",
+                  static_cast<unsigned>(previous.rampIntervalMs),
+                  static_cast<unsigned>(next.rampIntervalMs));
+  if (previous.restoreLastVolume != next.restoreLastVolume)
+    Serial.printf("[INFO] Requested restore last volume %s\n",
+                  next.restoreLastVolume ? "on" : "off");
+  const char *names[] = {"FL", "FR", "C", "SW", "SL", "SR"};
+  for (unsigned i = 0; i < 6; ++i) {
+    if (previous.trims[i] != next.trims[i])
+      Serial.printf("[INFO] Requested %s trim: %d -> %d dB\n", names[i],
+                    static_cast<int>(previous.trims[i]), static_cast<int>(next.trims[i]));
+    if (previous.hardware.channels[i].gain != next.hardware.channels[i].gain)
+      Serial.printf("[INFO] Requested %s gain: %u -> %u dB\n", names[i],
+                    static_cast<unsigned>(previous.hardware.channels[i].gain),
+                    static_cast<unsigned>(next.hardware.channels[i].gain));
+    if (previous.hardware.channels[i].muted != next.hardware.channels[i].muted)
+      Serial.printf("[INFO] Requested %s mute %s\n", names[i],
+                    next.hardware.channels[i].muted ? "on" : "off");
+  }
 }
 
 bool persistAudioChange() {
@@ -167,10 +231,12 @@ void handleUpdate() {
     reply(400, "text/plain", "Only the 5.1 multichannel input is supported");
     return;
   }
+  const AudioState previous = audio.state();
   if (!audio.apply(next)) {
     reply(500, "text/plain", "Audio command rejected");
     return;
   }
+  logAudioChanges(previous, next);
   if (!persistAudioChange()) {
     reply(500, "text/plain", "Target accepted, but saving failed; retrying");
     return;
@@ -198,9 +264,11 @@ void handlePreset() {
   String name = doc["name"].as<String>();
   String error;
   if (action == "apply") {
-    AudioState next = audio.state();
+    const AudioState previous = audio.state();
+    AudioState next = previous;
     if (!presets.apply(name, next, error)) { reply(400, "text/plain", error); return; }
     if (!audio.apply(next)) { reply(500, "text/plain", "Audio command rejected"); return; }
+    logAudioChanges(previous, next);
     if (!persistAudioChange()) {
       reply(500, "text/plain", "Preset applied, but saving settings failed; retrying");
       return;
@@ -224,6 +292,7 @@ void handlePreset() {
   presets = updated;
   presetWarning = "";
   ++revision;
+  Serial.printf("[INFO] Preset action: %s\n", action.c_str());
   reply(200, "text/plain", "Presets saved");
 }
 
@@ -355,11 +424,8 @@ void setup() {
 void loop() {
   server.handleClient();
   homeNetwork.tick();
-  const uint32_t now = millis();
-  if (homeNetwork.status() != lastNetworkStatus ||
-      uint32_t(now - lastStatusLog) >= 30000UL) {
+  if (homeNetwork.status() != lastNetworkStatus) {
     lastNetworkStatus = homeNetwork.status();
-    lastStatusLog = now;
     Serial.printf("[INFO] Receiver status: AP %s, clients %u; home: %s; Wi-Fi status %d",
                   WiFi.softAPIP().toString().c_str(),
                   static_cast<unsigned>(WiFi.softAPgetStationNum()),

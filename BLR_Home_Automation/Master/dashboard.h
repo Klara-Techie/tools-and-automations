@@ -398,6 +398,6 @@ function connectUpdates(){
   ws.onmessage=e=>{if(e.data==='refresh')refresh()};
   ws.onclose=()=>setTimeout(connectUpdates,3000);
 }
-refresh();connectUpdates();setInterval(refresh,4000);setInterval(updateCountdowns,1000);
+refresh();connectUpdates();setInterval(refresh,2000);setInterval(updateCountdowns,1000);
 </script></body></html>
 )HOMEHTML";

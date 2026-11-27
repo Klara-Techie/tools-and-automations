@@ -40,8 +40,13 @@ uint32_t socketTimer = 0;
 uint32_t socketTimerReportedAt = 0;
 WiFiClient receiverProbe;
 String receiverResponse;
+const uint32_t RECEIVER_PROBE_INTERVAL_MS = 2000;
+const uint8_t RECEIVER_FAILURE_LIMIT = 2;
 uint32_t lastReceiverProbe = 0;
 uint32_t receiverProbeStarted = 0;
+uint32_t lastReceiverFailureLog = 0;
+String lastReceiverFailure;
+uint8_t receiverFailures = 0;
 bool receiverProbePending = false;
 bool receiverOnline = false;
 
@@ -61,19 +66,37 @@ void setReceiverOnline(bool online) {
   notifyClients();
 }
 
-void finishReceiverProbe(bool online) {
+void finishReceiverProbe(bool online, const char* reason) {
   receiverProbe.stop();
   receiverProbePending = false;
   receiverResponse = "";
-  setReceiverOnline(online);
+  if (online) {
+    receiverFailures = 0;
+    lastReceiverFailure = "";
+    setReceiverOnline(true);
+    return;
+  }
+  if (receiverFailures < RECEIVER_FAILURE_LIMIT) ++receiverFailures;
+  const uint32_t now = millis();
+  if (lastReceiverFailure != reason ||
+      uint32_t(now - lastReceiverFailureLog) >= 30000UL) {
+    Serial.printf("[WARN] Receiver probe failed: %s\n", reason);
+    lastReceiverFailure = reason;
+    lastReceiverFailureLog = now;
+  }
+  if (receiverFailures >= RECEIVER_FAILURE_LIMIT) setReceiverOnline(false);
 }
 
 void maintainReceiver() {
   const uint32_t now = millis();
   if (WiFi.status() != WL_CONNECTED || !(entertainment.stateMask() & 2)) {
-    if (receiverProbePending) finishReceiverProbe(false);
-    else setReceiverOnline(false);
-    lastReceiverProbe = now - 4000UL;
+    if (receiverProbePending) receiverProbe.stop();
+    receiverProbePending = false;
+    receiverResponse = "";
+    receiverFailures = 0;
+    lastReceiverFailure = "";
+    setReceiverOnline(false);
+    lastReceiverProbe = now - RECEIVER_PROBE_INTERVAL_MS;
     return;
   }
   if (receiverProbePending) {
@@ -82,7 +105,7 @@ void maintainReceiver() {
       if (value < 0) break;
       receiverResponse += static_cast<char>(value);
       if (receiverResponse.length() > 1024) {
-        finishReceiverProbe(false);
+        finishReceiverProbe(false, "response too large");
         return;
       }
     }
@@ -93,26 +116,27 @@ void maintainReceiver() {
         const bool ok = (receiverResponse.startsWith("HTTP/1.1 200 ") ||
                          receiverResponse.startsWith("HTTP/1.0 200 ")) &&
                         body == "AV-Receiver";
-        finishReceiverProbe(ok);
+        finishReceiverProbe(ok, "unexpected HTTP status or health response");
         return;
       }
     }
-    if ((!receiverProbe.connected() && !receiverProbe.available()) ||
-        uint32_t(now - receiverProbeStarted) >= 1500UL) {
-      finishReceiverProbe(false);
+    if (!receiverProbe.connected() && !receiverProbe.available()) {
+      finishReceiverProbe(false, "connection closed before complete response");
+    } else if (uint32_t(now - receiverProbeStarted) >= 2000UL) {
+      finishReceiverProbe(false, "response timed out");
     }
     return;
   }
-  if (uint32_t(now - lastReceiverProbe) < 4000UL) return;
+  if (uint32_t(now - lastReceiverProbe) < RECEIVER_PROBE_INTERVAL_MS) return;
   lastReceiverProbe = now;
-  if (!receiverProbe.connect(RECEIVER_IP, 80, 250)) {
-    setReceiverOnline(false);
+  if (!receiverProbe.connect(RECEIVER_IP, 80, 500)) {
+    finishReceiverProbe(false, "connection to receiver failed");
     return;
   }
   const String request = String("GET /api/health HTTP/1.0\r\nHost: ") +
                          RECEIVER_IP.toString() + "\r\nConnection: close\r\n\r\n";
   if (receiverProbe.print(request) != request.length()) {
-    finishReceiverProbe(false);
+    finishReceiverProbe(false, "could not send health request");
     return;
   }
   receiverResponse = "";
@@ -418,6 +442,9 @@ void setup() {
     if (!adminAuthorized()) return;
     if (!receiverOnline || WiFi.status() != WL_CONNECTED ||
         !(entertainment.stateMask() & 2)) {
+      Serial.printf("[WARN] Receiver navigation blocked: online=%d, home Wi-Fi=%d, amplifier relay=%d\n",
+                    receiverOnline ? 1 : 0, WiFi.status() == WL_CONNECTED ? 1 : 0,
+                    (entertainment.stateMask() & 2) ? 1 : 0);
       server.send(503, "text/plain", "Receiver is offline or amplifier power is off");
       return;
     }

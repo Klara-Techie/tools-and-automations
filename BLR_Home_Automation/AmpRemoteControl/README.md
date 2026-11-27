@@ -63,9 +63,22 @@ Open the correct ESP32 serial port at 115200 baud, then press reset to see
 startup messages and the receiver access-point password. Do not share that
 password when sharing logs. After startup, the serial monitor reports the
 access-point address and connected client count, home Wi-Fi status and, when
-connected, the home IP. Status is printed when it changes and every 30 seconds.
+connected, the home IP. Status is printed when it changes, not periodically.
 The web server reports rejected Host headers; open the printed numeric IP
 address rather than a hostname.
+
+On the master serial monitor, receiver probe failures report whether connecting,
+sending, or receiving the health response failed. If the receiver page opens
+directly but AVR control stays offline, check the master's home Wi-Fi
+connection, amplifier relay state and these probe messages. Open
+`http://192.168.31.201/api/health` on home Wi-Fi; the response should be
+`AV-Receiver`. A browser reaching the receiver does not guarantee that the
+master can reach it.
+
+Receiver serial logs report accepted audio target changes, including master
+volume increases and decreases, changed channel settings,
+knob-light settings, preset actions and action HTTP results. These are requested
+settings, not confirmation that the FR6311 or LEDs responded.
 
 If there is no serial output, check the board and port selection, USB data
 cable and power, and any board-specific USB CDC settings. Verify this receiver

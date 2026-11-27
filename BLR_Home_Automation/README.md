@@ -145,9 +145,12 @@ using those nodes' hotspot addresses.
   Use **Master dashboard** on the receiver page to return.
   AVR control stays disabled until the amplifier relay is on and the master
   receives a successful health response from the receiver over home Wi-Fi.
-  The master checks approximately every four seconds; network failure or a
-  receiver restart can delay the status change. The check confirms the web
-  service is reachable, not that the audio hardware is functioning.
+  The master checks approximately every two seconds and requires two
+  consecutive failed checks before marking a previously online receiver
+  offline. Turning the amplifier relay off or losing the master's home Wi-Fi
+  disables the link without waiting for failed probes. Network failure or a
+  receiver restart can delay the status change. The check confirms the web service is reachable,
+  not that the audio hardware is functioning.
 * Phone on `Home-Automation`: open `http://192.168.4.1/`, with or without home Wi-Fi.
   If the phone warns that this network has no Internet, choose to stay connected.
   The receiver link requires a route to the home router network and normally
