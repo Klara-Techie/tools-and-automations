@@ -57,6 +57,25 @@ individual user accounts; devices with network access can control the receiver.
 Enter credentials only through a trusted connection to the receiver's WPA2
 access point, and keep both network passwords private.
 
+### Connection troubleshooting
+
+Open the correct ESP32 serial port at 115200 baud, then press reset to see
+startup messages and the receiver access-point password. Do not share that
+password when sharing logs. After startup, the serial monitor reports the
+access-point address and connected client count, home Wi-Fi status and, when
+connected, the home IP. Status is printed when it changes and every 30 seconds.
+The web server reports rejected Host headers; open the printed numeric IP
+address rather than a hostname.
+
+If there is no serial output, check the board and port selection, USB data
+cable and power, and any board-specific USB CDC settings. Verify this receiver
+sketch was uploaded, then reset the board with the monitor open. Early storage,
+audio initialization or access-point errors stop startup and are printed to
+serial. The receiver AP is `AV-Receiver` at `http://192.168.5.1/`; connect to
+it directly for initial home Wi-Fi setup. On home Wi-Fi, use the home IP
+reported in the log. Home credentials must be configured on the receiver page;
+the master node's settings do not automatically configure the receiver.
+
 The interface uses a 0-60 volume scale across the chip's -99 to 0 dB
 attenuation range, rounded to the nearest supported hardware setting. Level 0
 is the lowest level, not mute. Each UI step is approximately 1.65 dB; hardware

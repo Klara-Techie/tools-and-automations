@@ -29,6 +29,8 @@ bool dirty = false;
 bool audioFault = false;
 String audioWarning;
 String presetWarning;
+String lastNetworkStatus;
+uint32_t lastStatusLog = 0;
 
 void saveIfDue();
 
@@ -55,9 +57,12 @@ bool validHost() {
   const String host = server.header("Host");
   const String ap = WiFi.softAPIP().toString();
   if (host == ap || host == ap + ":80") return true;
-  if (WiFi.status() != WL_CONNECTED) return false;
-  const String home = WiFi.localIP().toString();
-  return host == home || host == home + ":80";
+  if (WiFi.status() == WL_CONNECTED) {
+    const String home = WiFi.localIP().toString();
+    if (host == home || host == home + ":80") return true;
+  }
+  Serial.println("[WARN] Rejected request with invalid Host header");
+  return false;
 }
 
 bool authorized() {
@@ -267,8 +272,10 @@ void saveIfDue() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+  Serial.println("\n[INFO] Receiver starting");
   Serial.println("WARNING: Prototype; verify serial timing and audio before connecting an amplifier.");
   knobLights.begin();
+  Serial.println("[INFO] Opening receiver storage");
   if (!storage.begin("receiver", false)) {
     Serial.println("ERROR: Cannot open persistent storage; firmware stopped.");
     while (true) delay(1000);
@@ -301,6 +308,7 @@ void setup() {
     while (true) delay(1000);
   }
 
+  Serial.println("[INFO] Starting receiver access point");
   WiFi.mode(WIFI_AP_STA);
   String password = storage.getString("apPassword", "");
   if (password.length() != 16) {
@@ -355,6 +363,7 @@ void setup() {
   server.on("/api/knob-lights", HTTP_POST, handleKnobLights);
   server.onNotFound([]() { reply(404, "text/plain", "Not found"); });
   server.begin();
+  Serial.println("[INFO] Receiver web server started on port 80");
   homeNetwork.begin(storage);
   ota.configure("home-amp-remote", OTA_PASSWORD, []() {
     knobLights.off();
@@ -373,6 +382,20 @@ void setup() {
 void loop() {
   server.handleClient();
   homeNetwork.tick();
+  const uint32_t now = millis();
+  if (homeNetwork.status() != lastNetworkStatus ||
+      uint32_t(now - lastStatusLog) >= 30000UL) {
+    lastNetworkStatus = homeNetwork.status();
+    lastStatusLog = now;
+    Serial.printf("[INFO] Receiver status: AP %s, clients %u; home: %s; Wi-Fi status %d",
+                  WiFi.softAPIP().toString().c_str(),
+                  static_cast<unsigned>(WiFi.softAPgetStationNum()),
+                  lastNetworkStatus.c_str(), static_cast<int>(WiFi.status()));
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.printf("; home IP %s", WiFi.localIP().toString().c_str());
+    }
+    Serial.println();
+  }
   knobLights.tick();
   ota.tick(WiFi.status() == WL_CONNECTED ? WiFi.localIP() : WiFi.softAPIP());
   if (!audioFault && !audio.tick()) {
