@@ -12,8 +12,9 @@ class KnobLights {
  public:
   bool begin() {
     const int pin = KNOB_LED_PIN;
-    if ((pin != 4 && pin != 5 && pin != 12 && pin != 13 &&
-         pin != 14) || pin == IR_LED_PIN) {
+    if (pin != 18 && pin != 19 && pin != 21 && pin != 22 &&
+        pin != 23 && pin != 25 && pin != 26 && pin != 27 &&
+        pin != 32 && pin != 33) {
       Serial.println("[ERROR] Knob LEDs disabled: invalid or conflicting GPIO");
       return false;
     }

@@ -3,7 +3,6 @@
 #include <HTTPClient.h>
 #include <WebSocketsServer.h>
 #include <HomeOta.h>
-#include <KnobLightSettings.h>
 #include <EntertainmentRelays.h>
 #include "config.h"
 #include "dashboard.h"
@@ -18,12 +17,10 @@ EntertainmentRelays entertainment(entertainmentPins, LIVING_ACTIVE_LOW);
 const uint8_t LOCAL_NODE = 255;  // Local relays are not in the remote-node array.
 const uint8_t WALL_NODE = 0;
 const uint8_t HEATER_NODE = 1;
-const uint8_t IR_NODE = 2;
 
 Node nodes[] = {
   {"wall", IPAddress(), 0, 0, 0, false},
-  {"heater", IPAddress(), 0, 0, 0, false},
-  {"ir", IPAddress(), 0, 0, 0, false}
+  {"heater", IPAddress(), 0, 0, 0, false}
 };
 
 const Appliance appliances[] = {
@@ -41,7 +38,12 @@ uint32_t lastReconnect = 0;
 const uint32_t MAX_TIMER_SECONDS = MAX_RELAY_TIMER_SECONDS;
 uint32_t socketTimer = 0;
 uint32_t socketTimerReportedAt = 0;
-KnobLightSettings knobSettings;
+WiFiClient receiverProbe;
+String receiverResponse;
+uint32_t lastReceiverProbe = 0;
+uint32_t receiverProbeStarted = 0;
+bool receiverProbePending = false;
+bool receiverOnline = false;
 
 bool valid(const char* value) {
   return value && value[0] && strstr(value, "REPLACE_") == nullptr;
@@ -49,6 +51,73 @@ bool valid(const char* value) {
 
 void notifyClients() {
   updates.broadcastTXT("refresh");
+}
+
+void setReceiverOnline(bool online) {
+  if (receiverOnline == online) return;
+  receiverOnline = online;
+  Serial.println(online ? "[INFO] Receiver web service online" :
+                          "[WARN] Receiver web service offline");
+  notifyClients();
+}
+
+void finishReceiverProbe(bool online) {
+  receiverProbe.stop();
+  receiverProbePending = false;
+  receiverResponse = "";
+  setReceiverOnline(online);
+}
+
+void maintainReceiver() {
+  const uint32_t now = millis();
+  if (WiFi.status() != WL_CONNECTED || !(entertainment.stateMask() & 2)) {
+    if (receiverProbePending) finishReceiverProbe(false);
+    else setReceiverOnline(false);
+    lastReceiverProbe = now - 4000UL;
+    return;
+  }
+  if (receiverProbePending) {
+    for (unsigned budget = 0; budget < 256 && receiverProbe.available(); ++budget) {
+      const int value = receiverProbe.read();
+      if (value < 0) break;
+      receiverResponse += static_cast<char>(value);
+      if (receiverResponse.length() > 1024) {
+        finishReceiverProbe(false);
+        return;
+      }
+    }
+    const int separator = receiverResponse.indexOf("\r\n\r\n");
+    if (separator >= 0) {
+      const String body = receiverResponse.substring(separator + 4);
+      if (body.length() >= 11) {
+        const bool ok = (receiverResponse.startsWith("HTTP/1.1 200 ") ||
+                         receiverResponse.startsWith("HTTP/1.0 200 ")) &&
+                        body == "AV-Receiver";
+        finishReceiverProbe(ok);
+        return;
+      }
+    }
+    if ((!receiverProbe.connected() && !receiverProbe.available()) ||
+        uint32_t(now - receiverProbeStarted) >= 1500UL) {
+      finishReceiverProbe(false);
+    }
+    return;
+  }
+  if (uint32_t(now - lastReceiverProbe) < 4000UL) return;
+  lastReceiverProbe = now;
+  if (!receiverProbe.connect(RECEIVER_IP, 80, 250)) {
+    setReceiverOnline(false);
+    return;
+  }
+  const String request = String("GET /api/health HTTP/1.0\r\nHost: ") +
+                         RECEIVER_IP.toString() + "\r\nConnection: close\r\n\r\n";
+  if (receiverProbe.print(request) != request.length()) {
+    finishReceiverProbe(false);
+    return;
+  }
+  receiverResponse = "";
+  receiverProbeStarted = millis();
+  receiverProbePending = true;
 }
 
 Node* findNode(const String& id) {
@@ -102,31 +171,15 @@ void handleRegister() {
     return;
   }
   uint32_t receivedSocketTimer = 0;
-  KnobLightSettings receivedKnobSettings;
   if (node == &nodes[WALL_NODE] &&
       (!readUnsigned(server.arg("t2"), receivedSocketTimer) ||
        receivedSocketTimer > MAX_TIMER_SECONDS)) {
     server.send(400, "text/plain", "Invalid socket timer status");
     return;
   }
-  if (node == &nodes[IR_NODE] && (configured & 2) &&
-      (!parseKnobLights(server.arg("on"), server.arg("color"),
-                        server.arg("brightness"), server.arg("pattern"),
-                        receivedKnobSettings) ||
-       receivedKnobSettings.on != bool(state & 2))) {
-    server.send(400, "text/plain", "Invalid knob lighting status");
-    return;
-  }
   const IPAddress address = server.client().remoteIP();
   bool changed = !node->online || node->state != state ||
                  node->configured != configured || node->address != address;
-  if (node == &nodes[IR_NODE] && (configured & 2)) {
-    changed = changed || knobSettings.on != receivedKnobSettings.on ||
-              knobSettings.color != receivedKnobSettings.color ||
-              knobSettings.brightness != receivedKnobSettings.brightness ||
-              knobSettings.pattern != receivedKnobSettings.pattern;
-    knobSettings = receivedKnobSettings;
-  }
   if (node == &nodes[WALL_NODE]) {
     if (socketTimer != receivedSocketTimer) changed = true;
     socketTimer = receivedSocketTimer;
@@ -170,15 +223,10 @@ void handleState() {
   }
   json += "],\"allTimerRemaining\":";
   json += entertainment.remainingSeconds(3);
-  json += ",\"irOnline\":";
-  json += nodes[IR_NODE].online && (nodes[IR_NODE].configured & 1) ? "true" : "false";
-  json += ",\"knobLights\":{\"available\":";
-  json += nodes[IR_NODE].online && (nodes[IR_NODE].configured & 2) ? "true" : "false";
-  json += ",\"on\":";
-  json += knobSettings.on ? "true" : "false";
-  json += ",\"color\":\"#" + knobColorHex(knobSettings.color) +
-          "\",\"brightness\":" + String(knobSettings.brightness) +
-          ",\"pattern\":\"" + KNOB_PATTERNS[knobSettings.pattern] + "\"}}";
+  json += ",\"receiverOnline\":";
+  json += receiverOnline && WiFi.status() == WL_CONNECTED &&
+          (entertainment.stateMask() & 2) ? "true" : "false";
+  json += "}";
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "application/json", json);
 }
@@ -312,64 +360,6 @@ void handleTimer() {
   notifyClients();
 }
 
-bool validIRCommand(const String& command) {
-  const char* allowed[] = {
-    "optical", "hdmi", "tv", "usb", "bluetooth", "aux", "mute", "power",
-    "master_plus", "master_minus", "front_plus", "front_minus",
-    "centre_plus", "centre_minus", "surround_plus", "surround_minus",
-    "sub_plus", "sub_minus", "reset", "up", "down", "left", "right", "ok",
-    "info", "mode", "amode", "tone", "test"
-  };
-  for (const char* item : allowed) if (command == item) return true;
-  return false;
-}
-
-void handleIR() {
-  if (!browserPostAuthorized()) return;
-  const String command = server.arg("command");
-  if (!validIRCommand(command)) {
-    server.send(400, "text/plain", "Invalid IR command");
-    return;
-  }
-  Node& node = nodes[IR_NODE];
-  if (!node.online || !(node.configured & 1)) {
-    server.send(409, "text/plain", "IR node offline or not configured");
-    return;
-  }
-  String response;
-  const int code = postToNode(node, "/ir", "command=" + command, response);
-  if (code != 200) {
-    server.send(502, "text/plain", "IR node did not confirm; command may have been sent");
-    return;
-  }
-  server.send(200, "text/plain", "IR command sent");
-}
-
-void handleKnobLights() {
-  if (!browserPostAuthorized()) return;
-  KnobLightSettings settings;
-  if (!parseKnobLights(server.arg("on"), server.arg("color"),
-                       server.arg("brightness"), server.arg("pattern"), settings)) {
-    server.send(400, "text/plain", "Invalid knob lighting settings");
-    return;
-  }
-  Node& node = nodes[IR_NODE];
-  if (!node.online || !(node.configured & 2)) {
-    server.send(409, "text/plain", "Knob LEDs offline or not configured");
-    return;
-  }
-  String response;
-  if (postToNode(node, "/knob-lights", knobSettingsBody(settings), response) != 200 ||
-      response != "OK") {
-    server.send(502, "text/plain", "Knob lighting not confirmed; check device status");
-    return;
-  }
-  knobSettings = settings;
-  node.state = (node.state & ~2UL) | (settings.on ? 2UL : 0UL);
-  server.send(200, "text/plain", "OK");
-  notifyClients();
-}
-
 void startHotspot() {
   lastApAttempt = millis();
   const int channel = WiFi.status() == WL_CONNECTED ? WiFi.channel() : 1;
@@ -424,12 +414,20 @@ void setup() {
   server.on("/", HTTP_GET, []() {
     if (adminAuthorized()) server.send_P(200, "text/html", DASHBOARD);
   });
+  server.on("/receiver", HTTP_GET, []() {
+    if (!adminAuthorized()) return;
+    if (!receiverOnline || WiFi.status() != WL_CONNECTED ||
+        !(entertainment.stateMask() & 2)) {
+      server.send(503, "text/plain", "Receiver is offline or amplifier power is off");
+      return;
+    }
+    server.sendHeader("Location", String("http://") + RECEIVER_IP.toString() + "/");
+    server.send(302, "text/plain", "Opening receiver");
+  });
   server.on("/api/state", HTTP_GET, handleState);
   server.on("/api/relay", HTTP_POST, handleRelay);
   server.on("/api/all", HTTP_POST, handleAll);
   server.on("/api/timer", HTTP_POST, handleTimer);
-  server.on("/api/ir", HTTP_POST, handleIR);
-  server.on("/api/knob-lights", HTTP_POST, handleKnobLights);
   server.on("/internal/register", HTTP_POST, handleRegister);
   server.onNotFound([]() { server.send(404, "text/plain", "Not found"); });
 
@@ -463,6 +461,7 @@ void loop() {
     return;
   }
   maintainWiFi();
+  maintainReceiver();
   ota.tick(apRunning ? WiFi.softAPIP() :
            (WiFi.status() == WL_CONNECTED ? WiFi.localIP() : IPAddress(0, 0, 0, 0)));
   server.handleClient();

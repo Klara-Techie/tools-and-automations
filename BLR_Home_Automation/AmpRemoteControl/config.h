@@ -12,10 +12,10 @@
 #define ROUTER_GATEWAY IPAddress(192, 168, 31, 1)
 #define AP_IP IPAddress(192, 168, 4, 1)
 
-// ESP8266 GPIO4 (NodeMCU D2) for an appropriately driven IR LED.
-#define IR_LED_PIN 4
-
-// Two daisy-chained WS2812B rings on ESP8266 GPIO5 (NodeMCU D1).
-#define KNOB_LED_PIN 5
+// Classic ESP32: GPIO16/17 are reserved for the FR6311.
+#define KNOB_LED_PIN 18
 #define KNOB_LEDS_PER_RING 10
 #define KNOB_LED_MAX_BRIGHTNESS 96
+
+// Reserve this address outside the router's DHCP pool.
+#define RECEIVER_IP IPAddress(192, 168, 31, 201)

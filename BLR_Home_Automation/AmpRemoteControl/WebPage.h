@@ -17,6 +17,8 @@ button,input,select{font:inherit}
 button{cursor:pointer;touch-action:manipulation}
 button:disabled,select:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.master-link{display:inline-flex;align-items:center;min-height:44px;padding:9px 14px;border:1px solid var(--line);border-radius:14px;background:#0b1c2c;color:var(--blue);font-size:12px;font-weight:750;text-decoration:none}
+.master-link:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .app{width:min(100%,760px);margin:0 auto;padding:0 16px}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 20px;gap:12px}
 .brand{display:flex;align-items:center;gap:11px;min-width:0}
@@ -71,6 +73,10 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 .preset-summary span{font-size:11px;color:var(--blue);text-align:right;overflow-wrap:anywhere}
 .notice{font-size:11px;color:var(--muted);line-height:1.55;padding:12px;border-radius:13px;background:#091a2a;border:1px solid var(--line);margin-top:10px}
 .notice:empty{display:none}.error{color:var(--danger);white-space:pre-wrap}
+.light-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.light-grid .field{margin-top:0}.light-power{display:flex;align-items:center;gap:10px;color:var(--text);font-size:13px}
+.light-power input{width:20px;height:20px;accent-color:var(--blue)}
+.light-grid .wide{grid-column:1/-1}
 .bottomnav{position:fixed;z-index:20;bottom:0;left:0;right:0;padding:9px 12px calc(9px + env(safe-area-inset-bottom));background:rgba(6,19,32,.95);backdrop-filter:blur(18px);border-top:1px solid var(--line)}
 .navinner{width:min(100%,600px);margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .navitem{display:grid;justify-items:center;gap:4px;padding:7px 3px;border:0;background:transparent;color:#a6bbc9;font-size:9px;font-weight:750;text-decoration:none}
@@ -81,6 +87,7 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 </style></head>
 <body><div class="app">
 <header class="topbar"><div class="brand"><div class="brandmark" aria-hidden="true">A</div><div><div class="brandname">AUDIO / CONTROL</div><div class="brandmeta">NETWORK AV RECEIVER</div></div></div><div id="connection" class="connection">CONNECTING</div></header>
+<a class="master-link" href="/master" title="Requires a connection to home Wi-Fi">&larr; Master dashboard</a>
 <section class="section"><div class="eyebrow">Personal listening space</div><h1>Receiver control</h1><div class="sub">Precision control for your home theatre system.</div></section>
 <div id="warning" class="notice error" role="alert"></div>
 <section class="section" id="volumeSection"><div class="card hero">
@@ -95,6 +102,14 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 <div class="sliderbox"><div class="sliderhead"><label for="bass">Bass</label><output id="bassValue"></output></div><input id="bass" type="range" min="0" max="14" step="1"><div class="stepper"><button id="bassDown" class="step-btn" type="button" aria-label="Decrease bass">−</button><span></span><button id="bassUp" class="step-btn" type="button" aria-label="Increase bass">+</button></div></div>
 <div class="sliderbox"><div class="sliderhead"><label for="treble">Treble</label><output id="trebleValue"></output></div><input id="treble" type="range" min="0" max="14" step="1"><div class="stepper"><button id="trebleDown" class="step-btn" type="button" aria-label="Decrease treble">−</button><span></span><button id="trebleUp" class="step-btn" type="button" aria-label="Increase treble">+</button></div></div>
 </div><div class="row-actions"><button id="bypass" class="action-btn" type="button">Tone bypass</button><button id="flat" class="action-btn" type="button">Reset flat</button></div></div></section>
+<section class="section" id="lightsSection"><div class="sectionhead"><h2>Knob lighting</h2><span>BOTH RINGS</span></div><div class="card">
+<fieldset id="lightFields" disabled style="border:0;padding:0;margin:0;min-width:0"><div class="light-grid">
+<label class="light-power wide"><input id="lightOn" type="checkbox" role="switch"> Ring power</label>
+<div class="field"><label for="lightPattern">Pattern</label><select id="lightPattern"><option value="solid">Solid</option><option value="breathing">Breathing</option><option value="rainbow">Rainbow</option><option value="chase">Chase</option><option value="comet">Comet</option><option value="color_cycle">Colour cycle</option><option value="aurora">Aurora</option><option value="ocean">Ocean waves</option><option value="fire">Fire glow</option><option value="candle">Candlelight</option><option value="twinkle">Starlight twinkle</option><option value="pendulum">Pendulum</option><option value="heartbeat">Heartbeat</option><option value="lighthouse">Lighthouse</option><option value="nebula">Nebula</option><option value="dual_breathing">Dual breathing</option><option value="color_segments">Colour segments</option></select></div>
+<div class="field"><label for="lightColor">Colour</label><input id="lightColor" type="color" value="#8be0d5"></div>
+<div class="field wide"><label for="lightBrightness">Brightness · <output id="lightBrightnessValue">40%</output></label><input id="lightBrightness" type="range" min="0" max="100" value="40"></div>
+</div></fieldset><div id="lightStatus" class="notice" role="status" aria-live="polite">Connecting to knob lights...</div>
+</div></section>
 <section class="section" id="presetsSection"><details class="advanced" id="presetsPanel"><summary><span class="preset-summary"><strong>Listening presets</strong><span id="selectedPreset">No preset selected</span></span></summary><div class="advancedbody">
 <div class="field"><label for="preset">Select and apply preset</label><select id="preset" disabled><option value="">No preset selected</option></select></div>
 <div class="field"><label for="presetName">Preset name</label><input id="presetName" type="text" maxlength="32" autocomplete="off" placeholder="e.g. Movie night"></div>
@@ -125,6 +140,43 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 <script>
 const $=id=>document.getElementById(id);
 let snapshot=null, busy=false, polling=false, nextPoll=0, queue=[], selectedPreset='', individualView=false;
+let lightDirty=false, lightBusy=false, lightRevision=0, lightTimer=null, lightAvailable=false;
+const automaticLightColors=['rainbow','color_cycle','aurora','ocean','fire','candle','nebula','dual_breathing','color_segments'];
+function lightPreview(){
+ $('lightBrightnessValue').textContent=$('lightBrightness').value+'%';
+ $('lightColor').disabled=!lightAvailable||automaticLightColors.includes($('lightPattern').value);
+ $('lightColor').title=automaticLightColors.includes($('lightPattern').value)?'This pattern chooses its own colours':'Shared ring colour';
+}
+function renderLights(settings){
+ lightAvailable=!!(settings&&settings.available);
+ $('lightFields').disabled=!lightAvailable;
+ if(!lightAvailable){$('lightStatus').textContent='Knob lights unavailable';}
+ else if(!lightDirty&&!lightBusy){
+  $('lightOn').checked=settings.on;$('lightColor').value=settings.color;
+  $('lightPattern').value=settings.pattern;$('lightBrightness').value=settings.brightness;
+  $('lightStatus').textContent='';
+ }
+ lightPreview();
+}
+$('lightFields').addEventListener('input',event=>{
+ lightDirty=true;lightRevision++;clearTimeout(lightTimer);
+ $('lightStatus').textContent='';lightPreview();
+ lightTimer=setTimeout(()=>{lightTimer=null;sendLights()},event.target.id==='lightOn'||event.target.id==='lightPattern'?0:300);
+});
+async function sendLights(){
+ if(lightBusy||!lightDirty)return;
+ if(!lightAvailable){$('lightStatus').textContent='Knob lights unavailable; change a setting to retry';return}
+ const revision=lightRevision;
+ const body=new URLSearchParams({on:$('lightOn').checked?'1':'0',color:$('lightColor').value.slice(1),brightness:$('lightBrightness').value,pattern:$('lightPattern').value});
+ lightBusy=true;
+ try{
+  const current=await get();
+  const r=await fetch('/api/knob-lights',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Receiver-Token':current.token},body});
+  if(!r.ok)throw Error(await r.text());
+  if(revision===lightRevision){lightDirty=false;$('lightStatus').textContent=''}
+ }catch(e){$('lightStatus').textContent='Not confirmed: '+e.message+'. Change a setting to retry.'}
+ finally{lightBusy=false;if(lightDirty&&lightRevision!==revision&&lightTimer===null)sendLights()}
+}
 const names=['FL','FR','C','SW','SL','SR'];
 const pairs=[{id:'front',name:'FL / FR',indices:[0,1]},{id:'surround',name:'SL / SR',indices:[4,5]}];
 const channels=$('channels');
@@ -153,6 +205,7 @@ function field(id,value){if(document.activeElement!==$(id))$(id).value=value}
 function button(id,on){$(id).classList.toggle('active',on);$(id).setAttribute('aria-pressed',String(on))}
 function channelMuteButton(id,on,masterMuted){button(id,on);$(id).classList.toggle('active',masterMuted||on);$(id).title=masterMuted?'Master mute is on; this button controls the channel mute setting.':''}
 function render(data){snapshot=data;const s=data.state;
+ renderLights(data.knobLights);
  $('connection').textContent='ESP32 CONNECTED';$('connection').className='connection status';
  $('warning').textContent=data.warning+(data.pendingSave?' Settings save pending.':'');
  $('homeStatus').textContent=(data.homeStatus||'Home Wi-Fi status unavailable')+(data.homeAddress?' · '+data.homeAddress:'');
@@ -175,7 +228,7 @@ function render(data){snapshot=data;const s=data.state;
  names.forEach((_,i)=>{const sent=data.transmitted[i],target=channelAttenuation(s,i);$('level'+i).textContent=sent.muted?'Muted':'';$('channel'+i).max=volumeLevel(s.limit);field('channel'+i,volumeLevel(target));field('gain'+i,s.gains[i]);$('channelValue'+i).textContent=volumeLevel(target);$('gainValue'+i).textContent=db(s.gains[i]);channelMuteButton('cmute'+i,s.mutes[i],s.mute)});
  pairs.forEach(p=>{const [a,b]=p.indices,first=channelAttenuation(s,a),second=channelAttenuation(s,b),mixed=first!==second,level=Math.round((volumeLevel(first)+volumeLevel(second))/2);const muteA=s.mutes[a],muteB=s.mutes[b];$('pairValue'+p.id).textContent=mixed?'Mixed':level;$('pair'+p.id).max=volumeLevel(s.limit);field('pair'+p.id,level);$('pair'+p.id).setAttribute('aria-valuetext',mixed?'Mixed levels; adjusting matches both':String(level));$('pairStatus'+p.id).textContent=s.mute||muteA&&muteB?'Muted':muteA||muteB?'Part muted':'';$('pairNote'+p.id).textContent=mixed?'Mixed levels; adjusting sets both equal.':'';channelMuteButton('pairMute'+p.id,muteA&&muteB,s.mute);if(muteA!==muteB)$('pairMute'+p.id).setAttribute('aria-pressed','mixed')})}
 async function get(){const r=await fetch('/api/state',{cache:'no-store'});if(!r.ok)throw Error('Connection failed');return await r.json()}
-async function refresh(){if(busy||polling)return;polling=true;try{const data=await get();if(!busy&&(!snapshot||data.revision>=snapshot.revision))render(data);nextPoll=Date.now()+(data.ramping?250:2000)}catch(e){$('connection').textContent='ESP32 OFFLINE';$('connection').className='connection offline';nextPoll=Date.now()+2000}finally{polling=false}}
+async function refresh(){if(busy||polling)return;polling=true;try{const data=await get();if(!busy&&(!snapshot||data.revision>=snapshot.revision))render(data);nextPoll=Date.now()+(data.ramping?250:2000)}catch(e){$('connection').textContent='ESP32 OFFLINE';$('connection').className='connection offline';renderLights(null);nextPoll=Date.now()+2000}finally{polling=false}}
 function enqueue(build,key='',priority=false,onSuccess=null){if(key)queue=queue.filter(job=>job.key!==key);const job={build,key,priority,onSuccess};if(priority){const i=queue.findIndex(item=>!item.priority);if(i<0)queue.push(job);else queue.splice(i,0,job)}else queue.push(job);drain()}
 function change(edit,key='',priority=false){enqueue(current=>{edit(current.state);return {path:'/api/state',body:{revision:current.revision,state:current.state}}},key,priority)}
 async function drain(){if(busy)return;busy=true;while(queue.length){const job=queue.shift();try{const current=await get(),request=job.build(current);const r=await fetch(request.path,{method:'POST',headers:{'Content-Type':'application/json','X-Receiver-Token':current.token},body:JSON.stringify(request.body)});if(!r.ok)throw Error(await r.text());if(job.onSuccess)job.onSuccess();render(await get())}catch(e){$('warning').textContent=e.message;try{render(await get());$('warning').textContent=e.message}catch(_){}}}busy=false;nextPoll=0}

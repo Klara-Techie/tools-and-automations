@@ -11,6 +11,7 @@
 
 // Confirm that this address is unused and outside the router's DHCP pool.
 #define MASTER_IP IPAddress(192, 168, 31, 200)
+#define RECEIVER_IP IPAddress(192, 168, 31, 201)
 // Provisional: replace with the router's actual gateway.
 #define ROUTER_GATEWAY IPAddress(192, 168, 31, 1)
 #define ROUTER_SUBNET IPAddress(255, 255, 255, 0)

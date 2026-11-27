@@ -8,9 +8,9 @@ audio path have been verified with suitable equipment.
 
 ## Arduino IDE
 
-1. Install the Espressif ESP32 board package and ArduinoJson 6.21.5 with the
-   IDE's Boards Manager and Library Manager.
-2. Open `AV_Receiver_Web_Control_ESP32.ino` from this folder, select the actual
+1. Install the Espressif ESP32 board package, ArduinoJson 6.21.5 and Adafruit
+   NeoPixel, and install the home automation `HomeNodeNetwork` library.
+2. Open `AmpRemoteControl.ino` from this folder, select the actual
    ESP32 board and port, then compile and upload.
 3. Power the FR6311 separately and establish a common ground before starting
    the ESP32. DATA is GPIO16 to FR6311 pin 13, CLOCK is GPIO17 to pin 14, and
@@ -18,17 +18,39 @@ audio path have been verified with suitable equipment.
    the datasheet.
 4. Open Serial Monitor at 115200 baud. Connect to the `AV-Receiver` access point
    using the randomly generated password printed there, and open the printed
-   IP address. To connect to home Wi-Fi, enter the SSID and password under
+   IP address (`192.168.5.1`). To connect to home Wi-Fi, enter the SSID and password under
    Advanced > Home Wi-Fi while connected to this access point. Do not put
    Wi-Fi credentials in the sketch or a committed file.
 
 The receiver first uses DHCP to discover the gateway, subnet and DNS, then
-reconnects using the requested fixed address `192.168.31.200`. Reserve that
+reconnects using the requested fixed address `192.168.31.201`. Reserve that
 address for this receiver or exclude it from the router's DHCP pool; automatic
 IP conflict detection is not provided. If the discovered subnet does not
 contain that address, the home connection cannot be configured. The receiver
 access point stays available for setup and recovery; station connections can
 briefly interrupt it when the radio changes channel.
+
+The master dashboard links to this receiver using its own `RECEIVER_IP` setting;
+keep that setting identical to this sketch's `RECEIVER_IP`. The link requires
+the browser and receiver to be reachable over the home router network. The
+master's hotspot does not route to the receiver; use home Wi-Fi or connect to
+the receiver's recovery hotspot directly. The receiver is an independent web
+server, not a proxied master API, and does not register with the master.
+The master enables its AVR link only when amplifier power is on and the
+receiver's `/api/health` endpoint responds over home Wi-Fi. This is a web
+service check, not confirmation of the audio hardware.
+The receiver's **Master dashboard** link uses `MASTER_IP` from its `config.h`;
+keep it synchronized with the master configuration. It also requires a route
+to the master on the home network.
+Moving the firmware to a different ESP32 does not transfer NVS settings or
+presets. Export audio settings from the previous receiver before moving, then
+restore the backup on the new device; presets and Wi-Fi must be configured
+again. Backups restore muted.
+
+The receiver page also controls the two decorative WS2812B knob rings. They
+start off and their settings are held in RAM only; see the home automation
+README for pinout, patterns, supply and wiring. Configure an OTA password in
+`config.h`; OTA turns off the rings and requests mute before an update.
 
 Wi-Fi credentials are stored in ESP32 NVS, not in the sketch or backup. Unless
 the device is separately configured with flash encryption, that storage is

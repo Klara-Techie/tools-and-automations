@@ -1,134 +1,394 @@
-#include "config.h"
-#include <ESP8266WebServer.h>
-#include <IRremoteESP8266.h>
-#include <IRsend.h>
-#include <HomeNodeNetwork.h>
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <Preferences.h>
+#include <WebServer.h>
+#include <WiFi.h>
+#include <esp_system.h>
 #include <HomeOta.h>
+
+#include "config.h"
+#include "AudioControl.h"
+#include "HomeNetwork.h"
 #include "KnobLights.h"
+#include "PresetManager.h"
+#include "StateJson.h"
+#include "WebPage.h"
 
-#if !defined(ESP8266)
-#error The IR node requires an ESP8266.
-#endif
-
-struct IRCommand {
-  const char* name;
-  uint32_t code;
-};
-
-const IRCommand commands[] = {
-  {"optical", 0x10EF42BD}, {"hdmi", 0x10EF02FD},
-  {"tv", 0x10EF52AD}, {"usb", 0x10EF629D},
-  {"bluetooth", 0x10EFA25D}, {"aux", 0x10EF22DD},
-  {"mute", 0x10EFF00F}, {"power", 0x10EF827D},
-  {"master_plus", 0x10EF906F}, {"master_minus", 0x10EFA05F},
-  {"front_plus", 0x10EF40BF}, {"front_minus", 0x10EFC03F},
-  {"centre_plus", 0x10EF50AF}, {"centre_minus", 0x10EF609F},
-  {"surround_plus", 0x10EF00FF}, {"surround_minus", 0x10EF807F},
-  {"sub_plus", 0x10EFD02F}, {"sub_minus", 0x10EFE01F},
-  {"reset", 0x10EF1AE5}, {"up", 0x10EF926D},
-  {"down", 0x10EFB04F}, {"left", 0x10EF728D},
-  {"right", 0x10EF32CD}, {"ok", 0x10EFB24D},
-  {"info", 0x10EFD827}, {"mode", 0x10EF9867},
-  {"amode", 0x10EF12ED}, {"tone", 0x10EFC837},
-  {"test", 0x10EF30CF}
-};
-
-ESP8266WebServer server(80);
-IRsend irsend(IR_LED_PIN >= 0 ? IR_LED_PIN : 0);
-bool irReady = false;
-bool networkReady = false;
-HomeOta ota;
+AudioControl audio;
+HomeNetwork homeNetwork;
+PresetManager presets;
 KnobLights knobLights;
-uint32_t stateMask() { return knobLights.ready() && knobLights.settings().on ? 2 : 0; }
-uint32_t configuredMask() { return (irReady ? 1 : 0) | (knobLights.ready() ? 2 : 0); }
-String lightStatus() { return "&" + knobSettingsBody(knobLights.settings()); }
-HomeNodeNetwork network("ir", AP_SSID, AP_PASSWORD,
-                        NODE_PASSWORD, AP_IP, stateMask, configuredMask,
-                        lightStatus);
+HomeOta ota;
+Preferences storage;
+WebServer server(80);
+String token;
+String warning;
+uint32_t revision = 0;
+uint32_t changedAt = 0;
+bool dirty = false;
+bool audioFault = false;
+String audioWarning;
+String presetWarning;
 
-bool authorize() {
-  if (!server.authenticate("node", NODE_PASSWORD)) {
-    server.requestAuthentication();
-    return false;
+void saveIfDue();
+
+String randomHex(size_t bytes) {
+  static const char digits[] = "0123456789abcdef";
+  String result;
+  for (size_t i = 0; i < bytes; ++i) {
+    uint8_t value;
+    esp_fill_random(&value, 1);
+    result += digits[value >> 4];
+    result += digits[value & 15];
   }
-  if (server.header("X-Node-Request") != "1") {
-    server.send(403, "text/plain", "Missing request header");
-    return false;
+  return result;
+}
+
+void reply(int code, const char *type, const String &body) {
+  server.sendHeader("Cache-Control", "no-store");
+  server.sendHeader("X-Content-Type-Options", "nosniff");
+  server.sendHeader("X-Frame-Options", "DENY");
+  server.send(code, type, body);
+}
+
+bool validHost() {
+  const String host = server.header("Host");
+  const String ap = WiFi.softAPIP().toString();
+  if (host == ap || host == ap + ":80") return true;
+  if (WiFi.status() != WL_CONNECTED) return false;
+  const String home = WiFi.localIP().toString();
+  return host == home || host == home + ":80";
+}
+
+bool authorized() {
+  return validHost() && server.header("X-Receiver-Token") == token;
+}
+
+void handleState() {
+  if (!validHost()) {
+    reply(403, "text/plain", "Invalid host");
+    return;
   }
-  return true;
+  DynamicJsonDocument doc(8192);
+  doc["revision"] = revision;
+  doc["token"] = token;
+  String combinedWarning = audioWarning;
+  if (presetWarning.length()) {
+    if (combinedWarning.length()) combinedWarning += " ";
+    combinedWarning += presetWarning;
+  }
+  if (warning.length()) {
+    if (combinedWarning.length()) combinedWarning += " ";
+    combinedWarning += warning;
+  }
+  doc["warning"] = combinedWarning;
+  doc["pendingSave"] = dirty;
+  doc["ramping"] = audio.isRamping();
+  doc["homeStatus"] = homeNetwork.status();
+  doc["homeConfigured"] = homeNetwork.configured();
+  doc["homeAddress"] = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "";
+  JsonObject lights = doc.createNestedObject("knobLights");
+  lights["available"] = knobLights.ready();
+  lights["on"] = knobLights.settings().on;
+  lights["color"] = "#" + knobColorHex(knobLights.settings().color);
+  lights["brightness"] = knobLights.settings().brightness;
+  lights["pattern"] = KNOB_PATTERNS[knobLights.settings().pattern];
+  JsonArray presetNames = doc.createNestedArray("presets");
+  for (unsigned i = 0; i < presets.count(); ++i) presetNames.add(presets.at(i).name);
+  writeState(doc.createNestedObject("state"), audio.state());
+  JsonArray channels = doc.createNestedArray("transmitted");
+  for (const fr6311::Channel &channel : audio.transmitted().channels) {
+    JsonObject item = channels.createNestedObject();
+    item["attenuation"] = channel.attenuation;
+    item["muted"] = channel.muted;
+  }
+  if (doc.overflowed()) {
+    reply(500, "text/plain", "State response exceeds available memory");
+    return;
+  }
+  String body;
+  serializeJson(doc, body);
+  reply(200, "application/json", body);
 }
 
 void handleKnobLights() {
-  if (!authorize()) {
-    Serial.println("[WARN] Knob lighting request rejected: authorization/header");
-    return;
-  }
-  if (!knobLights.ready()) {
-    Serial.println("[WARN] Knob lighting request rejected: LEDs not configured");
-    server.send(409, "text/plain", "Knob LEDs not configured");
-    return;
-  }
+  if (!authorized()) { reply(403, "text/plain", "Not authorized"); return; }
+  if (!knobLights.ready()) { reply(409, "text/plain", "Knob LEDs not configured"); return; }
   KnobLightSettings settings;
   if (!parseKnobLights(server.arg("on"), server.arg("color"),
                        server.arg("brightness"), server.arg("pattern"), settings)) {
-    Serial.println("[WARN] Knob lighting request rejected: invalid settings");
-    server.send(400, "text/plain", "Invalid knob lighting settings");
+    reply(400, "text/plain", "Invalid knob lighting settings");
     return;
   }
   knobLights.apply(settings);
-  Serial.printf("[INFO] Knob lights %s: pattern=%s, color=#%s, brightness=%u%%\n",
-                settings.on ? "ON" : "OFF", KNOB_PATTERNS[settings.pattern],
-                knobColorHex(settings.color).c_str(),
-                static_cast<unsigned>(settings.brightness));
-  server.send(200, "text/plain", "OK");
+  reply(200, "text/plain", "Knob lights updated");
 }
 
-void handleIR() {
-  if (!authorize()) return;
-  if (!irReady) {
-    server.send(409, "text/plain", "IR output is not configured");
+bool persistAudioChange() {
+  ++revision;
+  dirty = true;
+  changedAt = millis() - 2000;
+  saveIfDue();
+  return !dirty;
+}
+
+void handleUpdate() {
+  if (!authorized()) {
+    reply(403, "text/plain", "Not authorized");
     return;
   }
-  const String name = server.arg("command");
-  for (const IRCommand& command : commands) {
-    if (name == command.name) {
-      irsend.sendNEC(command.code, 32);
-      Serial.printf("[INFO] Sent IR command: %s\n", command.name);
-      server.send(200, "text/plain", "Sent");
+  if (audioFault) {
+    reply(503, "text/plain", "Audio control fault; restart required");
+    return;
+  }
+  String body = server.arg("plain");
+  if (body.length() > 4096) {
+    reply(413, "text/plain", "Request too large");
+    return;
+  }
+  DynamicJsonDocument doc(8192);
+  if (deserializeJson(doc, body) || !doc["revision"].is<uint32_t>() ||
+      doc["revision"].as<uint32_t>() != revision) {
+    reply(409, "text/plain", "Invalid or stale request; reload the state");
+    return;
+  }
+  AudioState next;
+  if (!readState(doc["state"].as<JsonObjectConst>(), next)) {
+    reply(400, "text/plain", "Invalid or unsupported settings");
+    return;
+  }
+  if (!next.hardware.leftRightMulti || !next.hardware.surroundMulti ||
+      next.hardware.recEnabled) {
+    reply(400, "text/plain", "Only the 5.1 multichannel input is supported");
+    return;
+  }
+  if (!audio.apply(next)) {
+    reply(500, "text/plain", "Audio command rejected");
+    return;
+  }
+  if (!persistAudioChange()) {
+    reply(500, "text/plain", "Target accepted, but saving failed; retrying");
+    return;
+  }
+  reply(200, "text/plain", "Target accepted and saved");
+}
+
+void handlePreset() {
+  if (!authorized()) { reply(403, "text/plain", "Not authorized"); return; }
+  if (audioFault) { reply(503, "text/plain", "Audio control fault; restart required"); return; }
+  String body = server.arg("plain");
+  if (body.length() > 1024) { reply(413, "text/plain", "Request too large"); return; }
+  DynamicJsonDocument doc(2048);
+  if (deserializeJson(doc, body) || !doc["revision"].is<uint32_t>() ||
+      doc["revision"].as<uint32_t>() != revision || !doc["action"].is<const char *>()) {
+    reply(409, "text/plain", "Invalid or stale request; reload the state");
+    return;
+  }
+  String action = doc["action"].as<String>();
+  if (!doc["name"].is<const char *>() ||
+      (action == "rename" && !doc["newName"].is<const char *>())) {
+    reply(400, "text/plain", "Invalid preset name");
+    return;
+  }
+  String name = doc["name"].as<String>();
+  String error;
+  if (action == "apply") {
+    AudioState next = audio.state();
+    if (!presets.apply(name, next, error)) { reply(400, "text/plain", error); return; }
+    if (!audio.apply(next)) { reply(500, "text/plain", "Audio command rejected"); return; }
+    if (!persistAudioChange()) {
+      reply(500, "text/plain", "Preset applied, but saving settings failed; retrying");
       return;
     }
+    reply(200, "text/plain", "Preset applied and saved");
+    return;
   }
-  server.send(400, "text/plain", "Unknown IR command");
+
+  PresetManager updated = presets;
+  bool ok = false;
+  if (action == "create") ok = updated.create(name, audio.state(), error);
+  else if (action == "update") ok = updated.update(name, audio.state(), error);
+  else if (action == "rename") ok = updated.rename(name, doc["newName"].as<String>(), error);
+  else if (action == "delete") ok = updated.remove(name, error);
+  else error = "Unknown preset action";
+  if (!ok) { reply(400, "text/plain", error); return; }
+  if (!updated.save(storage)) {
+    reply(500, "text/plain", "Could not save presets");
+    return;
+  }
+  presets = updated;
+  presetWarning = "";
+  ++revision;
+  reply(200, "text/plain", "Presets saved");
+}
+
+void handleNetwork() {
+  if (!authorized()) { reply(403, "text/plain", "Not authorized"); return; }
+  String body = server.arg("plain");
+  if (body.length() > 1024) { reply(413, "text/plain", "Request too large"); return; }
+  DynamicJsonDocument doc(2048);
+  if (deserializeJson(doc, body) || !doc["action"].is<const char *>()) {
+    reply(400, "text/plain", "Invalid network settings");
+    return;
+  }
+  String error;
+  const String action = doc["action"].as<String>();
+  bool ok = false;
+  if (action == "save" && doc["ssid"].is<const char *>() &&
+      doc["password"].is<const char *>()) {
+    ok = homeNetwork.configure(storage, doc["ssid"].as<String>(),
+                               doc["password"].as<String>(), error);
+  } else if (action == "clear") {
+    ok = homeNetwork.clear(storage, error);
+  } else {
+    error = "Invalid network settings";
+  }
+  if (!ok) { reply(400, "text/plain", error); return; }
+  ++revision;
+  reply(200, "text/plain", "Network settings saved");
+}
+
+void saveIfDue() {
+  if (!dirty || millis() - changedAt < 2000) return;
+  DynamicJsonDocument doc(4096);
+  writeState(doc.to<JsonObject>(), audio.state());
+  String serialized;
+  serializeJson(doc, serialized);
+  if (storage.putString("settings", serialized) != serialized.length()) {
+    warning = "Settings could not be saved; retrying.";
+    Serial.println(warning);
+    changedAt = millis();
+    return;
+  }
+  dirty = false;
+  warning = "";
 }
 
 void setup() {
   Serial.begin(115200);
+  delay(500);
+  Serial.println("WARNING: Prototype; verify serial timing and audio before connecting an amplifier.");
   knobLights.begin();
-  irReady = IR_LED_PIN >= 0 && IR_LED_PIN <= 16 &&
-            !(IR_LED_PIN >= 6 && IR_LED_PIN <= 11) &&
-            IR_LED_PIN != 1 && IR_LED_PIN != 3;
-  if (irReady) {
-    irsend.begin();
-  } else {
-    Serial.println("[WARN] IR GPIO not configured or invalid; IR disabled");
+  if (!storage.begin("receiver", false)) {
+    Serial.println("ERROR: Cannot open persistent storage; firmware stopped.");
+    while (true) delay(1000);
   }
-  server.collectHeaders("X-Node-Request");
-  server.on("/ir", HTTP_POST, handleIR);
-  server.on("/knob-lights", HTTP_POST, handleKnobLights);
-  server.onNotFound([]() { server.send(404, "text/plain", "Not found"); });
-  networkReady = network.begin();
-  if (networkReady) {
-    server.begin();
-    ota.configure("home-amp-remote", OTA_PASSWORD, []() { knobLights.off(); });
+  if (!presets.load(storage)) {
+    presets = PresetManager{};
+    presetWarning = "Saved presets are invalid; no presets loaded.";
+    Serial.println(presetWarning);
+  }
+  AudioState initial = AudioControl::defaults();
+  String saved = storage.getString("settings", "");
+  if (saved.length()) {
+    DynamicJsonDocument doc(4096);
+    if (deserializeJson(doc, saved) || !readState(doc.as<JsonObjectConst>(), initial)) {
+      initial = AudioControl::defaults();
+      warning = "Saved settings are invalid; muted defaults loaded.";
+      Serial.println(warning);
+    }
+  }
+  if (!initial.hardware.leftRightMulti || !initial.hardware.surroundMulti ||
+      initial.hardware.recEnabled) {
+    AudioControl::selectMultichannelInput(initial);
+    Serial.println("Saved routing changed to 5.1 multichannel; REC disabled.");
+  }
+  if (!initial.restoreLastVolume) initial.masterAttenuation = initial.startupAttenuation;
+  AudioState mutedInitial = initial;
+  mutedInitial.masterMuted = true;
+  if (!audio.begin(mutedInitial)) {
+    Serial.println("ERROR: Invalid initial audio state; firmware stopped.");
+    while (true) delay(1000);
+  }
+
+  WiFi.mode(WIFI_AP_STA);
+  String password = storage.getString("apPassword", "");
+  if (password.length() != 16) {
+    password = randomHex(8);
+    if (storage.putString("apPassword", password) != password.length()) {
+      Serial.println("ERROR: Cannot save Wi-Fi password; firmware stopped.");
+      while (true) delay(1000);
+    }
+  }
+  token = randomHex(16);
+  const IPAddress receiverAp(192, 168, 5, 1);
+  if (!WiFi.softAPConfig(receiverAp, receiverAp, IPAddress(255, 255, 255, 0)) ||
+      !WiFi.softAP("AV-Receiver", password.c_str())) {
+    Serial.println("ERROR: Could not start receiver access point.");
+    while (true) delay(1000);
+  }
+  Serial.println("Connect to Wi-Fi: AV-Receiver");
+  Serial.print("Wi-Fi password: ");
+  Serial.println(password);
+  Serial.print("Open http://");
+  Serial.println(WiFi.softAPIP());
+  const char *headers[] = {"Host", "X-Receiver-Token"};
+  server.collectHeaders(headers, 2);
+  server.on("/", HTTP_GET, []() {
+    if (!validHost()) {
+      reply(403, "text/plain", "Invalid host");
+      return;
+    }
+    server.sendHeader("Cache-Control", "no-store");
+    server.sendHeader("X-Frame-Options", "DENY");
+    server.send_P(200, "text/html; charset=utf-8", kWebPage);
+  });
+  server.on("/master", HTTP_GET, []() {
+    if (!validHost()) {
+      reply(403, "text/plain", "Invalid host");
+      return;
+    }
+    server.sendHeader("Location", String("http://") + MASTER_IP.toString() + "/");
+    reply(302, "text/plain", "Opening master dashboard");
+  });
+  server.on("/api/health", HTTP_GET, []() {
+    if (!validHost()) {
+      reply(403, "text/plain", "Invalid host");
+      return;
+    }
+    reply(200, "text/plain", "AV-Receiver");
+  });
+  server.on("/api/state", HTTP_GET, handleState);
+  server.on("/api/state", HTTP_POST, handleUpdate);
+  server.on("/api/presets", HTTP_POST, handlePreset);
+  server.on("/api/network", HTTP_POST, handleNetwork);
+  server.on("/api/knob-lights", HTTP_POST, handleKnobLights);
+  server.onNotFound([]() { reply(404, "text/plain", "Not found"); });
+  server.begin();
+  homeNetwork.begin(storage);
+  ota.configure("home-amp-remote", OTA_PASSWORD, []() {
+    knobLights.off();
+    AudioState muted = audio.state();
+    muted.masterMuted = true;
+    if (audio.apply(muted)) ++revision;
+    else Serial.println("ERROR: OTA mute command failed; disconnect amplifier.");
+  });
+  if (!initial.masterMuted && !audio.apply(initial)) {
+    audioFault = true;
+    audioWarning = "Unable to restore sound; receiver remains muted. Restart required.";
+    Serial.println(audioWarning);
   }
 }
 
 void loop() {
+  server.handleClient();
+  homeNetwork.tick();
   knobLights.tick();
-  if (networkReady) {
-    server.handleClient();
-    network.tick();
-    ota.tick(WiFi.status() == WL_CONNECTED ? WiFi.localIP() : IPAddress(0, 0, 0, 0));
+  ota.tick(WiFi.status() == WL_CONNECTED ? WiFi.localIP() : WiFi.softAPIP());
+  if (!audioFault && !audio.tick()) {
+    audioFault = true;
+    AudioState safe = audio.state();
+    safe.masterMuted = true;
+    if (audio.apply(safe)) {
+      ++revision;
+      dirty = true;
+      changedAt = millis();
+      audioWarning = "Audio control fault; mute command sent. Restart required.";
+    } else {
+      audioWarning = "Audio control fault; mute could not be sent. Disconnect the amplifier.";
+    }
+    Serial.println(audioWarning);
   }
-  yield();
+  saveIfDue();
+  delay(1);
 }

@@ -1,9 +1,10 @@
 #include "HomeNetwork.h"
+#include "config.h"
 
 #include <ArduinoJson.h>
 
 namespace {
-const IPAddress kReceiverAddress(192, 168, 31, 200);
+const IPAddress kReceiverAddress = RECEIVER_IP;
 const uint32_t kConnectionTimeoutMs = 20000;
 const uint32_t kRetryDelayMs = 30000;
 
