@@ -12,10 +12,8 @@ audio path have been verified with suitable equipment.
    NeoPixel, and install the home automation `HomeNodeNetwork` library.
 2. Open `AmpRemoteControl.ino` from this folder, select the actual
    ESP32 board and port, then compile and upload.
-3. Power the FR6311 separately and establish a common ground before starting
-   the ESP32. DATA is GPIO16 to FR6311 pin 13, CLOCK is GPIO17 to pin 14, and
-   DGND is pin 12. Verify the complete analog circuit and 9 V supply against
-   the datasheet.
+3. Check the [FR6311 wiring](#fr6311-control-wiring) and verify the complete
+   analog circuit and supply against the datasheet before applying power.
 4. Open Serial Monitor at 115200 baud. Connect to the `AV-Receiver` access point
    using the randomly generated password printed there, and open the printed
    IP address (`192.168.5.1`). To connect to home Wi-Fi, enter the SSID and password under
@@ -120,6 +118,49 @@ channel mute buttons without changing their individual mute settings.
 The ramp runs cooperatively in the main loop, so network or storage activity can delay
 steps; it is not a hardware safety interlock. Use an independent amplifier
 mute or disconnect the amplifier for safety-critical situations.
+
+## FR6311 control wiring
+
+These are the firmware's intended connections, **not a hardware-verified
+pinout**. Verify the exact IC, package orientation and pin numbers against its
+datasheet and the board schematic before wiring. GPIO numbers are ESP32 signal
+names, not physical header pin numbers.
+
+| ESP32 | FR6311 | Purpose |
+| --- | --- | --- |
+| GPIO16 | DATA, pin 13 | Serial data from ESP32 |
+| GPIO17 | CLOCK, pin 14 | Serial clock from ESP32 |
+| GND | DGND, pin 12 | Common signal ground |
+
+With power disconnected, check that the board's digital ground can safely share
+the ESP32 ground. Power the ESP32 and FR6311 from appropriate, separately
+regulated supplies; do not connect the FR6311 supply to an ESP32 GPIO or its
+3.3 V rail. The intended FR6311 supply is 9 V, but its supply pin, voltage,
+decoupling and analog connections must be verified for the actual circuit.
+Check the FR6311 DATA/CLOCK input voltage thresholds against ESP32 3.3 V
+outputs; use a suitable level shifter if required. Do not assume direct
+connection is compatible, and avoid driving the IC while it is unpowered.
+Verify that GPIO16 and GPIO17 are available on the specific ESP32 module.
+
+## Audio-path test idea
+
+An ESP32-generated test tone and a measured FL output could help check relative
+volume and mute behavior. This firmware does not yet generate or measure a
+test tone. Start with a low-level external signal generator and oscilloscope or
+audio analyzer, with the power amplifier and speakers disconnected. Confirm
+the multichannel FL input path, then compare FL output amplitude at several
+volume settings and mute. Check the other channels separately; test L/R tone
+controls at multiple frequencies.
+
+Do **not** connect an FR6311 audio output directly to an ESP32 ADC pin. The
+output may have DC bias or voltage swings outside the ESP32's permitted input
+range. A future ESP32 loopback requires a properly designed, verified
+AC-coupled, biased, attenuated and protected input, plus a suitable conditioned
+test-tone output. ADC calibration, clipping and noise limit measurement
+accuracy. On a classic ESP32, use an available ADC1 input for measurements
+while Wi-Fi is active; confirm capabilities and pin availability for the
+actual module. Such a test cannot replace checking serial waveforms, all
+channels and the complete audio circuit.
 
 ## Hardware limitations and validation
 
