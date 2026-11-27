@@ -47,10 +47,9 @@ String randomHex(size_t bytes) {
 
 void reply(int code, const char *type, const String &body) {
   const String path = server.uri();
-  if (server.method() == HTTP_POST &&
+  if (code >= 400 && server.method() == HTTP_POST &&
       (path == "/api/state" || path == "/api/presets" || path == "/api/knob-lights")) {
-    Serial.printf("[%s] Action %s: HTTP %d\n",
-                  code >= 400 ? "WARN" : "INFO", path.c_str(), code);
+    Serial.printf("[WARN] Action %s: HTTP %d\n", path.c_str(), code);
   }
   server.sendHeader("Cache-Control", "no-store");
   server.sendHeader("X-Content-Type-Options", "nosniff");
@@ -137,23 +136,29 @@ void handleKnobLights() {
   reply(200, "text/plain", "Knob lights updated");
 }
 
+unsigned volumeLevel(unsigned attenuation) {
+  return ((99 - attenuation) * 60 + 49) / 99;
+}
+
+void logToneChange(const char *name, int previous, int next) {
+  if (previous == next) return;
+  Serial.printf("[INFO] Requested %s %s: %d -> %d / 14 (%+d -> %+d dB)\n",
+                name, next > previous ? "increased" : "decreased",
+                (previous + 14) / 2, (next + 14) / 2, previous, next);
+}
+
 void logAudioChanges(const AudioState &previous, const AudioState &next) {
   if (previous.masterAttenuation != next.masterAttenuation) {
-    const unsigned oldLevel = ((99 - previous.masterAttenuation) * 60 + 49) / 99;
-    const unsigned newLevel = ((99 - next.masterAttenuation) * 60 + 49) / 99;
     Serial.printf("[INFO] Requested master volume %s: %u -> %u / 60 (attenuation -%u -> -%u dB)\n",
                   next.masterAttenuation < previous.masterAttenuation ? "increased" : "decreased",
-                  oldLevel, newLevel, static_cast<unsigned>(previous.masterAttenuation),
+                  volumeLevel(previous.masterAttenuation), volumeLevel(next.masterAttenuation),
+                  static_cast<unsigned>(previous.masterAttenuation),
                   static_cast<unsigned>(next.masterAttenuation));
   }
   if (previous.masterMuted != next.masterMuted)
     Serial.printf("[INFO] Requested master mute %s\n", next.masterMuted ? "on" : "off");
-  if (previous.hardware.bass != next.hardware.bass)
-    Serial.printf("[INFO] Requested bass: %d -> %d dB\n",
-                  static_cast<int>(previous.hardware.bass), static_cast<int>(next.hardware.bass));
-  if (previous.hardware.treble != next.hardware.treble)
-    Serial.printf("[INFO] Requested treble: %d -> %d dB\n",
-                  static_cast<int>(previous.hardware.treble), static_cast<int>(next.hardware.treble));
+  logToneChange("bass", previous.hardware.bass, next.hardware.bass);
+  logToneChange("treble", previous.hardware.treble, next.hardware.treble);
   if (previous.hardware.toneBypass != next.hardware.toneBypass)
     Serial.printf("[INFO] Requested tone bypass %s\n", next.hardware.toneBypass ? "on" : "off");
   if (previous.hardware.inputGain != next.hardware.inputGain)
@@ -162,12 +167,10 @@ void logAudioChanges(const AudioState &previous, const AudioState &next) {
                   static_cast<unsigned>(next.hardware.inputGain));
   if (previous.minimumAttenuation != next.minimumAttenuation)
     Serial.printf("[INFO] Requested volume limit: %u -> %u / 60\n",
-                  static_cast<unsigned>(((99 - previous.minimumAttenuation) * 60 + 49) / 99),
-                  static_cast<unsigned>(((99 - next.minimumAttenuation) * 60 + 49) / 99));
+                  volumeLevel(previous.minimumAttenuation), volumeLevel(next.minimumAttenuation));
   if (previous.startupAttenuation != next.startupAttenuation)
     Serial.printf("[INFO] Requested startup volume: %u -> %u / 60\n",
-                  static_cast<unsigned>(((99 - previous.startupAttenuation) * 60 + 49) / 99),
-                  static_cast<unsigned>(((99 - next.startupAttenuation) * 60 + 49) / 99));
+                  volumeLevel(previous.startupAttenuation), volumeLevel(next.startupAttenuation));
   if (previous.volumeStep != next.volumeStep)
     Serial.printf("[INFO] Requested volume step: %u -> %u\n",
                   static_cast<unsigned>(previous.volumeStep), static_cast<unsigned>(next.volumeStep));
@@ -179,10 +182,18 @@ void logAudioChanges(const AudioState &previous, const AudioState &next) {
     Serial.printf("[INFO] Requested restore last volume %s\n",
                   next.restoreLastVolume ? "on" : "off");
   const char *names[] = {"FL", "FR", "C", "SW", "SL", "SR"};
+  const fr6311::Settings oldTarget = AudioControl::effective(previous);
+  const fr6311::Settings newTarget = AudioControl::effective(next);
   for (unsigned i = 0; i < 6; ++i) {
-    if (previous.trims[i] != next.trims[i])
-      Serial.printf("[INFO] Requested %s trim: %d -> %d dB\n", names[i],
-                    static_cast<int>(previous.trims[i]), static_cast<int>(next.trims[i]));
+    if (previous.trims[i] != next.trims[i]) {
+      const unsigned oldAttenuation = oldTarget.channels[i].attenuation;
+      const unsigned newAttenuation = newTarget.channels[i].attenuation;
+      const char *change = newAttenuation < oldAttenuation ? "increased" :
+                           newAttenuation > oldAttenuation ? "decreased" : "unchanged";
+      Serial.printf("[INFO] Requested %s volume %s: %u -> %u / 60 (attenuation -%u -> -%u dB)\n",
+                    names[i], change, volumeLevel(oldAttenuation),
+                    volumeLevel(newAttenuation), oldAttenuation, newAttenuation);
+    }
     if (previous.hardware.channels[i].gain != next.hardware.channels[i].gain)
       Serial.printf("[INFO] Requested %s gain: %u -> %u dB\n", names[i],
                     static_cast<unsigned>(previous.hardware.channels[i].gain),
@@ -268,6 +279,7 @@ void handlePreset() {
     AudioState next = previous;
     if (!presets.apply(name, next, error)) { reply(400, "text/plain", error); return; }
     if (!audio.apply(next)) { reply(500, "text/plain", "Audio command rejected"); return; }
+    Serial.println("[INFO] Preset action: apply");
     logAudioChanges(previous, next);
     if (!persistAudioChange()) {
       reply(500, "text/plain", "Preset applied, but saving settings failed; retrying");

@@ -21,6 +21,7 @@ class AudioControl {
   static AudioState defaults();
   static bool valid(const AudioState &state);
   static void selectMultichannelInput(AudioState &state);
+  static fr6311::Settings effective(const AudioState &state);
   bool begin(const AudioState &state);
   bool apply(const AudioState &state);
   bool tick();
@@ -29,7 +30,6 @@ class AudioControl {
   const fr6311::Settings &transmitted() const { return transmitted_; }
 
  private:
-  static fr6311::Settings effective(const AudioState &state);
   void sendFrames(const uint32_t (&frames)[4]);
   FR6311Transport transport_;
   AudioState state_{};
