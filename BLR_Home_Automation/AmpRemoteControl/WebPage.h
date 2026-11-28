@@ -36,7 +36,8 @@ h1{font-size:clamp(25px,7vw,34px);letter-spacing:-.045em;margin:4px 0 5px}
 .herohead{display:flex;justify-content:space-between;align-items:center;gap:10px;position:relative}
 .pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:10px;color:var(--muted);background:#091a2a}
 .volume-wrap{display:grid;place-items:center;padding:12px 0 10px;position:relative}
-.gauge{--accent:var(--blue);position:relative;width:min(56vw,210px);aspect-ratio:1;margin:0 auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.gauge.dragging{cursor:grabbing}
+.gauge{--accent:var(--blue);position:relative;width:min(56vw,210px);aspect-ratio:1;margin:0 auto;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.gauge .g-track,.gauge .g-fill,.g-knob{cursor:pointer}.gauge.dragging,.gauge.dragging *{cursor:grabbing}
 .gauge-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .gauge:focus-within .g-track{stroke:#3f7099}
 .gauge svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -44,6 +45,7 @@ h1{font-size:clamp(25px,7vw,34px);letter-spacing:-.045em;margin:4px 0 5px}
 .g-track{stroke:#24445f;stroke-width:9}
 .g-fill{stroke:var(--accent);stroke-width:9;transition:stroke-dasharray .12s,stroke .12s;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 45%,transparent))}
 .g-mark{fill:var(--text);stroke:#0a1b2b;stroke-width:2}
+.gauge circle.g-knob{fill:var(--accent);stroke:#0a1b2b;stroke-width:2.5;transition:r .12s,fill .12s}.gauge.dragging circle.g-knob{r:9}
 .g-center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding-top:6%}
 .g-num{font-size:clamp(42px,11vw,56px);font-weight:760;letter-spacing:-.075em;line-height:1;font-variant-numeric:tabular-nums;color:var(--text);transition:color .12s}
 .g-unit{font-size:11px;color:var(--accent);font-weight:800;letter-spacing:.15em;margin-top:5px;text-transform:uppercase}
@@ -196,7 +198,7 @@ const names=['FL','FR','C','SW','SL','SR'];
 const pairs=[{id:'front',name:'FL / FR',indices:[0,1]},{id:'surround',name:'SL / SR',indices:[4,5]}];
 // 270-degree arc on a pathLength=100 circle: starts bottom-left (min), ends bottom-right (max).
 const GAUGE_SPAN=75, gaugeState={};
-function gaugeMarkup(id,small,inputId,label){return `<div class="gauge${small?' small':''}" id="gauge${id}"><input id="${inputId}" class="gauge-input" type="range" min="0" max="60" step="1" aria-label="${label} volume"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="g-track" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="${GAUGE_SPAN} 100" transform="rotate(135 60 60)"/><circle class="g-fill" id="gaugeFill${id}" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100" transform="rotate(135 60 60)"/><circle class="g-mark" id="gaugeMark${id}" r="5" cx="60" cy="10" hidden/></svg><div class="g-center"><div class="g-num" id="gaugeNum${id}">--</div><div class="g-unit">${label}</div><div class="g-cap" id="gaugeCap${id}"></div></div><div class="g-ends" aria-hidden="true"><span>0</span><span>60</span></div></div>`}
+function gaugeMarkup(id,small,inputId,label){return `<div class="gauge${small?' small':''}" id="gauge${id}"><input id="${inputId}" class="gauge-input" type="range" min="0" max="60" step="1" aria-label="${label} volume"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="g-track" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="${GAUGE_SPAN} 100" transform="rotate(135 60 60)"/><circle class="g-fill" id="gaugeFill${id}" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100" transform="rotate(135 60 60)"/><circle class="g-mark" id="gaugeMark${id}" r="5" cx="60" cy="10" hidden/><circle class="g-knob" id="gaugeKnob${id}" r="7" cx="60" cy="10"/></svg><div class="g-center"><div class="g-num" id="gaugeNum${id}">--</div><div class="g-unit">${label}</div><div class="g-cap" id="gaugeCap${id}"></div></div><div class="g-ends" aria-hidden="true"><span>0</span><span>60</span></div></div>`}
 const MUTE_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/><path class="ic-on" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="ic-off" d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const RESET_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function tileHead(label,muteId,resetId){return `<div class="channel-head"><button id="${resetId}" class="icon-btn" type="button" aria-label="Reset ${label}" title="Reset ${label}">${RESET_ICON}</button><button id="${muteId}" class="icon-btn" type="button" aria-label="Mute ${label}" title="Mute ${label}">${MUTE_ICON}</button></div>`}
@@ -209,8 +211,9 @@ function paintGauge(id){const g=gaugeState[id];if(!g)return;
  $('gauge'+id).classList.toggle('muted',!previewing&&g.muted);
  $('gaugeNum'+id).textContent=shown;
  $('gaugeCap'+id).textContent=previewing?(g.preview===g.current?'CURRENT LEVEL':'NOW '+g.current):g.caption;
- const mark=$('gaugeMark'+id),angle=(135+270*clamp(g.current,0,60)/60)*Math.PI/180;
- mark.setAttribute('cx',(60+50*Math.cos(angle)).toFixed(2));mark.setAttribute('cy',(60+50*Math.sin(angle)).toFixed(2));
+ const point=level=>{const a=(135+270*clamp(level,0,60)/60)*Math.PI/180;return [(60+50*Math.cos(a)).toFixed(2),(60+50*Math.sin(a)).toFixed(2)]};
+ const mark=$('gaugeMark'+id),[mx,my]=point(g.current),knob=$('gaugeKnob'+id),[kx,ky]=point(shown);
+ mark.setAttribute('cx',mx);mark.setAttribute('cy',my);knob.setAttribute('cx',kx);knob.setAttribute('cy',ky);
  mark.toggleAttribute('hidden',!previewing||g.preview===g.current)}
 function setGauge(id,current,muted,caption){const g=gaugeState[id]||(gaugeState[id]={preview:null,committed:false});
  if(g.committed){g.preview=null;g.committed=false}
@@ -219,13 +222,18 @@ function bindPreview(sliderId,gaugeId){const slider=$(sliderId);
  slider.addEventListener('input',()=>{const g=gaugeState[gaugeId];if(!g)return;g.preview=Number(slider.value);g.committed=false;paintGauge(gaugeId)});
  const end=()=>{const g=gaugeState[gaugeId];if(!g||g.preview===null)return;g.committed=true;if(g.preview===g.current){g.preview=null;g.committed=false;paintGauge(gaugeId)}};
  ['change','pointerup','touchend','blur','knobend'].forEach(type=>slider.addEventListener(type,end))}
-// The gauge ring is the volume control: drag (or tap) along the arc to drive the hidden range input.
+// The gauge ring is the volume control. The centre never reacts, so the page can be scrolled over it.
+// Touch drags must start on the ring near the knob and never jump on a tap; a mouse can click anywhere on the ring.
 function bindKnob(gaugeId,inputId){const gauge=$('gauge'+gaugeId),input=$(inputId);let dragging=false,start=null;
  const levelAt=e=>{const r=gauge.getBoundingClientRect(),deg=Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2)*180/Math.PI;let rel=(deg-135+720)%360;if(rel>270)rel=rel>315?0:270;return Math.round(rel/270*60)};
+ const onRing=e=>{const r=gauge.getBoundingClientRect(),R=r.width*50/120,d=Math.hypot(e.clientX-r.left-r.width/2,e.clientY-r.top-r.height/2);return d>R*.7&&d<R*1.3};
+ const nearKnob=e=>Math.abs(levelAt(e)-Number(input.value))<=7;
+ const grabbable=(e,touch)=>onRing(e)&&(!touch||nearKnob(e));
+ gauge.addEventListener('touchstart',e=>{if(e.touches.length===1&&grabbable(e.touches[0],true))e.preventDefault()},{passive:false});
  const apply=e=>{const prev=Number(input.value);let level=levelAt(e);
   if(dragging&&Math.abs(level-prev)>30)level=prev>30?60:0;// don't jump across the gap at the bottom
   input.value=level;if(!dragging||input.value!==String(prev))input.dispatchEvent(new Event('input',{bubbles:true}))};
- gauge.addEventListener('pointerdown',e=>{if(e.button>0)return;e.preventDefault();gauge.setPointerCapture(e.pointerId);start=input.value;dragging=false;apply(e);dragging=true;gauge.classList.add('dragging')});
+ gauge.addEventListener('pointerdown',e=>{const touch=e.pointerType!=='mouse';if(e.button>0||!grabbable(e,touch))return;e.preventDefault();gauge.setPointerCapture(e.pointerId);start=input.value;dragging=false;if(!touch)apply(e);dragging=true;gauge.classList.add('dragging')});
  gauge.addEventListener('pointermove',e=>{if(dragging)apply(e)});
  const end=()=>{if(!dragging)return;dragging=false;gauge.classList.remove('dragging');input.dispatchEvent(new Event(input.value!==start?'change':'knobend',{bubbles:true}))};
  gauge.addEventListener('pointerup',end);gauge.addEventListener('pointercancel',end)}

@@ -104,8 +104,10 @@ channel output gain. Existing saved settings are not reset to these defaults.
 
 Master and each speaker tile show the level on a 270-degree gauge (0 on the
 left, 60 on the right) with the channel name in the centre. The gauge is the
-volume control: drag or tap along the ring, or focus it and use the arrow
-keys. While dragging, the gauge
+volume control: drag the knob along the ring (on touch screens the drag must
+start on the knob, so scrolling over the gauge or tapping it never changes the
+volume; with a mouse you can also click anywhere on the ring), or focus it and
+use the arrow keys. While dragging, the gauge
 shows the new level in amber with a marker at the current level, and turns
 green when the new level matches the current one. If the receiver stops
 responding for about 4 seconds the page shows it offline, and reloads itself
