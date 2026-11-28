@@ -17,12 +17,12 @@ button,input,select{font:inherit}
 button{cursor:pointer;touch-action:manipulation}
 button:disabled,select:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
-.master-link{display:inline-flex;align-items:center;min-height:44px;padding:9px 14px;border:1px solid var(--line);border-radius:14px;background:#0b1c2c;color:var(--blue);font-size:12px;font-weight:750;text-decoration:none}
-.master-link:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .app{width:min(100%,760px);margin:0 auto;padding:0 16px}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 20px;gap:12px}
-.brand{display:flex;align-items:center;gap:11px;min-width:0}
-.brandmark{width:40px;height:40px;flex:none;border-radius:14px;background:linear-gradient(145deg,#65d6fb,#258fc9);display:grid;place-items:center;color:#061827;font-size:19px;font-weight:900}
+.brand{display:flex;align-items:center;gap:11px;min-width:0;color:inherit;text-decoration:none;border-radius:14px}
+.brand:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.brandmark{width:40px;height:40px;flex:none;border-radius:14px;background:linear-gradient(145deg,#65d6fb,#258fc9);display:grid;place-items:center;color:#061827;font-size:19px;font-weight:900;transition:transform .15s,box-shadow .15s}
+.brand:hover .brandmark,.brand:focus-visible .brandmark{transform:scale(1.06);box-shadow:0 0 0 3px #56c8f540}
 .brandname{font-size:14px;font-weight:850;letter-spacing:.16em}.brandmeta{font-size:10px;color:var(--muted);letter-spacing:.14em;margin-top:3px}
 .connection{font-size:10px;font-weight:750;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:8px 10px;background:#0b1b2b;white-space:nowrap}
 .connection.status{color:var(--good);border-color:#62d6a544}.connection.offline{color:var(--danger);border-color:#ff727c66}
@@ -36,15 +36,33 @@ h1{font-size:clamp(25px,7vw,34px);letter-spacing:-.045em;margin:4px 0 5px}
 .herohead{display:flex;justify-content:space-between;align-items:center;gap:10px;position:relative}
 .pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:10px;color:var(--muted);background:#091a2a}
 .volume-wrap{display:grid;place-items:center;padding:12px 0 10px;position:relative}
-.volume-ring{width:min(50vw,190px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--blue) var(--level,0%),#24445f 0);padding:8px;box-shadow:0 0 0 1px #56c8f526,0 0 44px #56c8f51c}
-.volume-ring:before{content:"";position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#173650,#0a1b2b 72%)}
-.volume-inner{position:relative;text-align:center}.volume-number{font-size:clamp(42px,11vw,56px);font-weight:760;letter-spacing:-.075em;line-height:1;font-variant-numeric:tabular-nums}
-.volume-unit{font-size:11px;color:var(--blue);font-weight:800;letter-spacing:.15em;margin-top:5px}.volume-caption{font-size:11px;color:var(--muted);margin-top:7px}
+.gauge{--accent:var(--blue);position:relative;width:min(56vw,210px);aspect-ratio:1;margin:0 auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.gauge.dragging{cursor:grabbing}
+.gauge-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.gauge:focus-within .g-track{stroke:#3f7099}
+.gauge svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.gauge circle{fill:none;stroke-linecap:round}
+.g-track{stroke:#24445f;stroke-width:9}
+.g-fill{stroke:var(--accent);stroke-width:9;transition:stroke-dasharray .12s,stroke .12s;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 45%,transparent))}
+.g-mark{fill:var(--text);stroke:#0a1b2b;stroke-width:2}
+.g-center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding-top:6%}
+.g-num{font-size:clamp(42px,11vw,56px);font-weight:760;letter-spacing:-.075em;line-height:1;font-variant-numeric:tabular-nums;color:var(--text);transition:color .12s}
+.g-unit{font-size:11px;color:var(--accent);font-weight:800;letter-spacing:.15em;margin-top:5px;text-transform:uppercase}
+.g-cap{font-size:11px;color:var(--muted);margin-top:6px}.g-cap:empty{display:none}
+.g-ends{position:absolute;left:14%;right:14%;bottom:4%;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.gauge.preview{--accent:#ffb454}.gauge.preview .g-num{color:#ffb454}
+.gauge.match{--accent:var(--good)}.gauge.match .g-num{color:var(--good)}
+.gauge.muted{--accent:#5c7387}.gauge.muted .g-num{color:var(--muted)}
+.gauge.small{width:min(100%,132px)}.gauge.small .g-num{font-size:30px}.gauge.small .g-unit{font-size:10px;letter-spacing:.1em;margin-top:3px}.gauge.small .g-cap{font-size:9px;margin-top:3px}.gauge.small .g-ends{font-size:9px;bottom:2%}
+.gauge.small .g-track,.gauge.small .g-fill{stroke-width:10}
+.icon-btn{flex:none;width:38px;height:38px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:12px;background:#0b1c2c;color:var(--muted);transition:background .12s,color .12s,border-color .12s}
+.icon-btn svg{width:19px;height:19px}.icon-btn:hover{color:var(--blue);border-color:#56c8f566}
+.icon-btn .ic-off{display:none}.icon-btn.active{background:#ff8c941f;border-color:var(--danger);color:var(--danger)}
+.icon-btn.active .ic-on{display:none}.icon-btn.active .ic-off{display:inline}
+.head-actions{display:flex;align-items:center;gap:6px}
 input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer}
-.volume-slider{margin:7px 0 0}
-.vol-actions{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:9px;margin-top:15px}
+.vol-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}
 .control-btn{min-height:48px;border-radius:15px;border:1px solid var(--line);background:#0b1c2c;color:var(--text);font-weight:800;font-size:17px}
-#mute{font-size:12px;letter-spacing:.08em}#mute.active{background:#56c8f5;color:#061827;border-color:#56c8f5}
+#mute{width:42px;height:42px}#mute svg{width:21px;height:21px}
 .channel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .channel{background:#0b1d2e;border:1px solid var(--line);border-radius:17px;padding:13px;min-width:0}
 .channel-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.channel-head strong{font-size:14px}.channel-head output{color:var(--blue);font-size:13px;font-variant-numeric:tabular-nums}
@@ -86,15 +104,13 @@ details.advanced summary::-webkit-details-marker{display:none}details.advanced s
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style></head>
 <body><div class="app">
-<header class="topbar"><div class="brand"><div class="brandmark" aria-hidden="true">A</div><div><div class="brandname">AUDIO / CONTROL</div><div class="brandmeta">NETWORK AV RECEIVER</div></div></div><div id="connection" class="connection">CONNECTING</div></header>
-<a class="master-link" href="/master" title="Requires a connection to home Wi-Fi">&larr; Master dashboard</a>
+<header class="topbar"><a class="brand" id="masterLink" href="/master" title="Open master dashboard (requires home Wi-Fi)" aria-label="Open master dashboard"><div class="brandmark" aria-hidden="true">A</div><div><div class="brandname">AUDIO / CONTROL</div><div class="brandmeta">NETWORK AV RECEIVER</div></div></a><div id="connection" class="connection">CONNECTING</div></header>
 <section class="section"><div class="eyebrow">Personal listening space</div><h1>Receiver control</h1><div class="sub">Precision control for your home theatre system.</div></section>
 <div id="warning" class="notice error" role="alert"></div>
 <section class="section" id="volumeSection"><div class="card hero">
-<div class="herohead"><div class="eyebrow">Master</div><div class="pill" id="rampStatus" aria-live="polite">CONNECTING</div></div>
-<div class="volume-wrap"><div class="volume-ring" id="volumeRing"><div class="volume-inner"><div class="volume-number" id="masterValue">--</div><div class="volume-unit">VOLUME</div><div class="volume-caption">LEVEL / 60</div></div></div></div>
-<input id="master" class="volume-slider" type="range" min="0" max="60" step="1" aria-label="Master volume">
-<div class="vol-actions"><button id="down" class="control-btn" type="button" aria-label="Decrease master volume">−</button><button id="mute" class="control-btn" type="button">MUTE</button><button id="up" class="control-btn" type="button" aria-label="Increase master volume">+</button></div>
+<div class="herohead"><div class="eyebrow"></div><div class="head-actions"><div class="pill" id="rampStatus" aria-live="polite">CONNECTING</div><button id="mute" class="icon-btn" type="button" aria-label="Mute master" title="Mute master"></button></div></div>
+<div class="volume-wrap" id="masterGauge"></div>
+<div class="vol-actions"><button id="down" class="control-btn" type="button" aria-label="Decrease master volume">−</button><button id="up" class="control-btn" type="button" aria-label="Increase master volume">+</button></div>
 </div></section>
 <section class="section" id="speakersSection"><div class="sectionhead"><h2>Speaker levels</h2><span>6 CHANNELS</span></div><div class="card"><div id="channels" class="channel-grid"></div><div class="row-actions"><button id="channelView" class="action-btn" type="button" aria-pressed="false">Individual view</button><button id="balance" class="action-btn" type="button">Restore balance</button></div></div></section>
 <section class="section" id="toneSection"><div class="sectionhead"><h2>Tone shaping</h2><span>LEFT / RIGHT</span></div><div class="card">
@@ -170,7 +186,7 @@ async function sendLights(){
  lightBusy=true;
  try{
   const current=await get();
-  const r=await fetch('/api/knob-lights',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Receiver-Token':current.token},body});
+  const r=await request('/api/knob-lights',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Receiver-Token':current.token},body});
   if(!r.ok)throw Error(await r.text());
   if(revision===lightRevision){lightDirty=false;$('lightStatus').textContent=''}
  }catch(e){$('lightStatus').textContent='Not confirmed: '+e.message+'. Change a setting to retry.'}
@@ -178,15 +194,51 @@ async function sendLights(){
 }
 const names=['FL','FR','C','SW','SL','SR'];
 const pairs=[{id:'front',name:'FL / FR',indices:[0,1]},{id:'surround',name:'SL / SR',indices:[4,5]}];
+// 270-degree arc on a pathLength=100 circle: starts bottom-left (min), ends bottom-right (max).
+const GAUGE_SPAN=75, gaugeState={};
+function gaugeMarkup(id,small,inputId,label){return `<div class="gauge${small?' small':''}" id="gauge${id}"><input id="${inputId}" class="gauge-input" type="range" min="0" max="60" step="1" aria-label="${label} volume"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="g-track" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="${GAUGE_SPAN} 100" transform="rotate(135 60 60)"/><circle class="g-fill" id="gaugeFill${id}" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100" transform="rotate(135 60 60)"/><circle class="g-mark" id="gaugeMark${id}" r="5" cx="60" cy="10" hidden/></svg><div class="g-center"><div class="g-num" id="gaugeNum${id}">--</div><div class="g-unit">${label}</div><div class="g-cap" id="gaugeCap${id}"></div></div><div class="g-ends" aria-hidden="true"><span>0</span><span>60</span></div></div>`}
+const MUTE_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/><path class="ic-on" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="ic-off" d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const RESET_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function tileHead(label,muteId,resetId){return `<div class="channel-head"><button id="${resetId}" class="icon-btn" type="button" aria-label="Reset ${label}" title="Reset ${label}">${RESET_ICON}</button><button id="${muteId}" class="icon-btn" type="button" aria-label="Mute ${label}" title="Mute ${label}">${MUTE_ICON}</button></div>`}
+$('mute').innerHTML=MUTE_ICON;
+function paintGauge(id){const g=gaugeState[id];if(!g)return;
+ const previewing=g.preview!==null,shown=previewing?g.preview:g.current,frac=clamp(shown,0,60)/60;
+ $('gaugeFill'+id).setAttribute('stroke-dasharray',(GAUGE_SPAN*frac).toFixed(2)+' 100');
+ $('gauge'+id).classList.toggle('preview',previewing&&g.preview!==g.current);
+ $('gauge'+id).classList.toggle('match',previewing&&g.preview===g.current);
+ $('gauge'+id).classList.toggle('muted',!previewing&&g.muted);
+ $('gaugeNum'+id).textContent=shown;
+ $('gaugeCap'+id).textContent=previewing?(g.preview===g.current?'CURRENT LEVEL':'NOW '+g.current):g.caption;
+ const mark=$('gaugeMark'+id),angle=(135+270*clamp(g.current,0,60)/60)*Math.PI/180;
+ mark.setAttribute('cx',(60+50*Math.cos(angle)).toFixed(2));mark.setAttribute('cy',(60+50*Math.sin(angle)).toFixed(2));
+ mark.toggleAttribute('hidden',!previewing||g.preview===g.current)}
+function setGauge(id,current,muted,caption){const g=gaugeState[id]||(gaugeState[id]={preview:null,committed:false});
+ if(g.committed){g.preview=null;g.committed=false}
+ Object.assign(g,{current,muted,caption});paintGauge(id)}
+function bindPreview(sliderId,gaugeId){const slider=$(sliderId);
+ slider.addEventListener('input',()=>{const g=gaugeState[gaugeId];if(!g)return;g.preview=Number(slider.value);g.committed=false;paintGauge(gaugeId)});
+ const end=()=>{const g=gaugeState[gaugeId];if(!g||g.preview===null)return;g.committed=true;if(g.preview===g.current){g.preview=null;g.committed=false;paintGauge(gaugeId)}};
+ ['change','pointerup','touchend','blur','knobend'].forEach(type=>slider.addEventListener(type,end))}
+// The gauge ring is the volume control: drag (or tap) along the arc to drive the hidden range input.
+function bindKnob(gaugeId,inputId){const gauge=$('gauge'+gaugeId),input=$(inputId);let dragging=false,start=null;
+ const levelAt=e=>{const r=gauge.getBoundingClientRect(),deg=Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2)*180/Math.PI;let rel=(deg-135+720)%360;if(rel>270)rel=rel>315?0:270;return Math.round(rel/270*60)};
+ const apply=e=>{const prev=Number(input.value);let level=levelAt(e);
+  if(dragging&&Math.abs(level-prev)>30)level=prev>30?60:0;// don't jump across the gap at the bottom
+  input.value=level;if(!dragging||input.value!==String(prev))input.dispatchEvent(new Event('input',{bubbles:true}))};
+ gauge.addEventListener('pointerdown',e=>{if(e.button>0)return;e.preventDefault();gauge.setPointerCapture(e.pointerId);start=input.value;dragging=false;apply(e);dragging=true;gauge.classList.add('dragging')});
+ gauge.addEventListener('pointermove',e=>{if(dragging)apply(e)});
+ const end=()=>{if(!dragging)return;dragging=false;gauge.classList.remove('dragging');input.dispatchEvent(new Event(input.value!==start?'change':'knobend',{bubbles:true}))};
+ gauge.addEventListener('pointerup',end);gauge.addEventListener('pointercancel',end)}
+$('masterGauge').innerHTML=gaugeMarkup('master',false,'master','Master');
 const channels=$('channels');
 names.forEach((name,i)=>{
  const pair=pairs.find(p=>p.indices[0]===i);
  if(pair){const combined=document.createElement('div');combined.className='channel';combined.id='pairCard'+pair.id;
- combined.innerHTML=`<div class="channel-head"><strong>${pair.name}</strong><output id="pairValue${pair.id}"></output></div><span id="pairStatus${pair.id}" class="channel-status"></span><input id="pair${pair.id}" type="range" min="0" max="60" step="1" aria-label="${pair.name} level"><div class="stepper"><button id="pairDown${pair.id}" class="step-btn" type="button" aria-label="Decrease ${pair.name} level">−</button><span style="flex:1"></span><button id="pairUp${pair.id}" class="step-btn" type="button" aria-label="Increase ${pair.name} level">+</button></div><div class="row-actions"><button id="pairMute${pair.id}" class="action-btn" type="button" aria-label="Mute ${pair.name}">MUTE</button><button id="pairReset${pair.id}" class="action-btn" type="button" aria-label="Reset ${pair.name}">RESET</button></div><p id="pairNote${pair.id}" class="pair-note"></p>`;
+ combined.innerHTML=`${tileHead(pair.name,'pairMute'+pair.id,'pairReset'+pair.id)}${gaugeMarkup('pair'+pair.id,true,'pair'+pair.id,pair.name)}<div class="stepper"><button id="pairDown${pair.id}" class="step-btn" type="button" aria-label="Decrease ${pair.name} level">−</button><span style="flex:1"></span><button id="pairUp${pair.id}" class="step-btn" type="button" aria-label="Increase ${pair.name} level">+</button></div><p id="pairNote${pair.id}" class="pair-note"></p>`;
  channels.appendChild(combined)}
  const div=document.createElement('div');div.className='channel';
  div.id='channelCard'+i;div.hidden=i===0||i===1||i===4||i===5;
- div.innerHTML=`<div class="channel-head"><strong>${name}</strong><output id="channelValue${i}"></output></div><span id="level${i}" class="channel-status"></span><input id="channel${i}" type="range" min="0" max="60" step="1" aria-label="${name} level"><div class="stepper"><button id="channelDown${i}" class="step-btn" type="button" aria-label="Decrease ${name} level">−</button><span style="flex:1"></span><button id="channelUp${i}" class="step-btn" type="button" aria-label="Increase ${name} level">+</button></div><div class="row-actions"><button id="cmute${i}" class="action-btn" type="button" aria-label="Mute ${name}">MUTE</button><button id="reset${i}" class="action-btn" type="button" aria-label="Reset ${name}">RESET</button></div>`;
+ div.innerHTML=`${tileHead(name,'cmute'+i,'reset'+i)}${gaugeMarkup('ch'+i,true,'channel'+i,name)}<div class="stepper"><button id="channelDown${i}" class="step-btn" type="button" aria-label="Decrease ${name} level">−</button><span style="flex:1"></span><button id="channelUp${i}" class="step-btn" type="button" aria-label="Increase ${name} level">+</button></div>`;
  channels.appendChild(div);
  const gain=document.createElement('div');gain.className='field';
  gain.innerHTML=`<label for="gain${i}">${name} output gain <output id="gainValue${i}" class="gain-value"></output></label><div class="stepper"><button id="gainDown${i}" class="step-btn" type="button" aria-label="Decrease ${name} gain">−</button><input id="gain${i}" type="range" min="0" max="14" step="2"><button id="gainUp${i}" class="step-btn" type="button" aria-label="Increase ${name} gain">+</button></div>`;
@@ -194,17 +246,19 @@ names.forEach((name,i)=>{
 });
 function db(n){return (n>0?'+':'')+n+' dB'}
 function clamp(n,lo,hi){return Math.min(hi,Math.max(lo,n))}
-function volumeLevel(attenuation){return Math.round((99-attenuation)*60/99)}
-function volumeAttenuation(level){return Math.round((60-level)*99/60)}
+// Must match volumeLevel() in AmpRemoteControl.ino: levels 20-60 use 1 dB steps
+// (-40..0 dB), levels 0-20 use 3 dB steps down to -99 dB.
+function volumeLevel(attenuation){return attenuation<=40?60-attenuation:Math.max(0,20-Math.floor((attenuation-39)/3))}
+function volumeAttenuation(level){return level>=20?60-level:Math.min(99,40+(20-level)*3)}
 function toneLevel(dbValue){return (dbValue+14)/2}
 function toneDb(level){return level*2-14}
 function channelAttenuation(s,i){return clamp(s.master+s.trims[i],s.limit,99)}
 function setChannels(s,indices,level){const n=Math.max(s.limit,volumeAttenuation(clamp(level,0,60)));indices.forEach(i=>s.trims[i]=n-s.master)}
 function field(id,value){if(document.activeElement!==$(id))$(id).value=value}
 function button(id,on){$(id).classList.toggle('active',on);$(id).setAttribute('aria-pressed',String(on))}
-function channelMuteButton(id,on,masterMuted){button(id,on);$(id).classList.toggle('active',masterMuted||on);$(id).title=masterMuted?'Master mute is on; this button controls the channel mute setting.':''}
+function channelMuteButton(id,on,masterMuted){button(id,on);$(id).classList.toggle('active',masterMuted||on);$(id).title=masterMuted?'Master mute is on; this button controls the channel mute setting.':$(id).getAttribute('aria-label')}
 function render(data){snapshot=data;const s=data.state;
- if(data.masterUrl)document.querySelector('.master-link').href=data.masterUrl;
+ if(data.masterUrl)$('masterLink').href=data.masterUrl;
  renderLights(data.knobLights);
  $('connection').textContent='ESP32 CONNECTED';$('connection').className='connection status';
  $('warning').textContent=data.warning+(data.pendingSave?' Settings save pending.':'');
@@ -220,18 +274,26 @@ function render(data){snapshot=data;const s=data.state;
  $('preset').disabled=!namesList.length;
  ['presetApply','presetUpdate','presetRename','presetDelete'].forEach(id=>$(id).disabled=!selectedPreset);
  $('rampStatus').textContent=s.mute?'Muted':data.ramping?'Adjusting':'Ready';
- $('masterValue').textContent=volumeLevel(s.master);$('volumeRing').style.setProperty('--level',(volumeLevel(s.master)/60*100)+'%');$('master').max=volumeLevel(s.limit);field('master',volumeLevel(s.master));button('mute',s.mute);
+ setGauge('master',volumeLevel(s.master),s.mute,s.mute?'MUTED':'');$('master').max=volumeLevel(s.limit);field('master',volumeLevel(s.master));button('mute',s.mute);
  ['bass','treble'].forEach(k=>{field(k,toneLevel(s[k]));$(k+'Value').textContent=toneLevel(s[k])});
  field('inputGain',s.inputGain);$('inputGainValue').textContent=db(s.inputGain);
  ['limit','startup'].forEach(k=>field(k,volumeLevel(s[k])));field('step',s.step);field('rampMs',s.rampMs);
  ['bypass','restore'].forEach(k=>button(k,s[k]));
- names.forEach((_,i)=>{const sent=data.transmitted[i],target=channelAttenuation(s,i);$('level'+i).textContent=sent.muted?'Muted':'';$('channel'+i).max=volumeLevel(s.limit);field('channel'+i,volumeLevel(target));field('gain'+i,s.gains[i]);$('channelValue'+i).textContent=volumeLevel(target);$('gainValue'+i).textContent=db(s.gains[i]);channelMuteButton('cmute'+i,s.mutes[i],s.mute)});
- pairs.forEach(p=>{const [a,b]=p.indices,first=channelAttenuation(s,a),second=channelAttenuation(s,b),mixed=first!==second,level=Math.round((volumeLevel(first)+volumeLevel(second))/2);const muteA=s.mutes[a],muteB=s.mutes[b];$('pairValue'+p.id).textContent=mixed?'Mixed':level;$('pair'+p.id).max=volumeLevel(s.limit);field('pair'+p.id,level);$('pair'+p.id).setAttribute('aria-valuetext',mixed?'Mixed levels; adjusting matches both':String(level));$('pairStatus'+p.id).textContent=s.mute||muteA&&muteB?'Muted':muteA||muteB?'Part muted':'';$('pairNote'+p.id).textContent=mixed?'Mixed levels; adjusting sets both equal.':'';channelMuteButton('pairMute'+p.id,muteA&&muteB,s.mute);if(muteA!==muteB)$('pairMute'+p.id).setAttribute('aria-pressed','mixed')})}
-async function get(){const r=await fetch('/api/state',{cache:'no-store'});if(!r.ok)throw Error('Connection failed');return await r.json()}
-async function refresh(){if(busy||polling)return;polling=true;try{const data=await get();if(!busy&&(!snapshot||data.revision>=snapshot.revision))render(data);nextPoll=Date.now()+(data.ramping?250:2000)}catch(e){$('connection').textContent='ESP32 OFFLINE';$('connection').className='connection offline';renderLights(null);nextPoll=Date.now()+2000}finally{polling=false}}
+ names.forEach((_,i)=>{const target=channelAttenuation(s,i),muted=s.mute||s.mutes[i];$('channel'+i).max=volumeLevel(s.limit);field('channel'+i,volumeLevel(target));field('gain'+i,s.gains[i]);setGauge('ch'+i,volumeLevel(target),muted,muted?'MUTED':'');$('gainValue'+i).textContent=db(s.gains[i]);channelMuteButton('cmute'+i,s.mutes[i],s.mute)});
+ pairs.forEach(p=>{const [a,b]=p.indices,first=channelAttenuation(s,a),second=channelAttenuation(s,b),mixed=first!==second,level=Math.round((volumeLevel(first)+volumeLevel(second))/2);const muteA=s.mutes[a],muteB=s.mutes[b],muted=s.mute||muteA&&muteB;setGauge('pair'+p.id,level,muted,mixed?'MIXED':muted?'MUTED':muteA||muteB?'PART MUTED':'');$('pair'+p.id).max=volumeLevel(s.limit);field('pair'+p.id,level);$('pair'+p.id).setAttribute('aria-valuetext',mixed?'Mixed levels; adjusting matches both':String(level));$('pairNote'+p.id).textContent=mixed?'Mixed levels; adjusting sets both equal.':'';channelMuteButton('pairMute'+p.id,muteA&&muteB,s.mute);if(muteA!==muteB)$('pairMute'+p.id).setAttribute('aria-pressed','mixed')})}
+// Per-boot token changes when the receiver restarts; any reconnect reloads the page for a clean state.
+let bootToken=null,offline=false,reloading=false;
+async function request(path,options={}){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),4000);
+ try{return await fetch(path,{...options,cache:'no-store',signal:ctrl.signal})}
+ catch(e){offline=true;throw Error('Receiver not reachable')}
+ finally{clearTimeout(timer)}}
+async function get(){const r=await request('/api/state');if(!r.ok)throw Error('Connection failed');const data=await r.json();
+ if(offline||(bootToken&&data.token!==bootToken)){if(!reloading){reloading=true;$('connection').textContent='RECONNECTED · RELOADING';location.reload()}throw Error('Reconnected; reloading page')}
+ bootToken=data.token;return data}
+async function refresh(){if(busy||polling)return;polling=true;try{const data=await get();if(!busy&&(!snapshot||data.revision>=snapshot.revision))render(data);nextPoll=Date.now()+(data.ramping?250:2000)}catch(e){if(reloading)return;$('connection').textContent='ESP32 OFFLINE';$('connection').className='connection offline';renderLights(null);nextPoll=Date.now()+2000}finally{polling=false}}
 function enqueue(build,key='',priority=false,onSuccess=null){if(key)queue=queue.filter(job=>job.key!==key);const job={build,key,priority,onSuccess};if(priority){const i=queue.findIndex(item=>!item.priority);if(i<0)queue.push(job);else queue.splice(i,0,job)}else queue.push(job);drain()}
 function change(edit,key='',priority=false){enqueue(current=>{edit(current.state);return {path:'/api/state',body:{revision:current.revision,state:current.state}}},key,priority)}
-async function drain(){if(busy)return;busy=true;while(queue.length){const job=queue.shift();try{const current=await get(),request=job.build(current);const r=await fetch(request.path,{method:'POST',headers:{'Content-Type':'application/json','X-Receiver-Token':current.token},body:JSON.stringify(request.body)});if(!r.ok)throw Error(await r.text());if(job.onSuccess)job.onSuccess();render(await get())}catch(e){$('warning').textContent=e.message;try{render(await get());$('warning').textContent=e.message}catch(_){}}}busy=false;nextPoll=0}
+async function drain(){if(busy)return;busy=true;while(queue.length){const job=queue.shift();try{const current=await get(),jobRequest=job.build(current);const r=await request(jobRequest.path,{method:'POST',headers:{'Content-Type':'application/json','X-Receiver-Token':current.token},body:JSON.stringify(jobRequest.body)});if(!r.ok)throw Error(await r.text());if(job.onSuccess)job.onSuccess();render(await get())}catch(e){$('warning').textContent=e.message;try{render(await get());$('warning').textContent=e.message}catch(_){}}}busy=false;nextPoll=0}
 ['inputGain','step','rampMs'].forEach(k=>$(k).onchange=e=>{const n=Number(e.target.value);change(s=>s[k]=n)});
 ['bass','treble'].forEach(k=>{$(k).onchange=e=>{const n=toneDb(Number(e.target.value));change(s=>s[k]=n)};$(k+'Down').onclick=()=>change(s=>s[k]=toneDb(clamp(toneLevel(s[k])-1,0,14)));$(k+'Up').onclick=()=>change(s=>s[k]=toneDb(clamp(toneLevel(s[k])+1,0,14)))});
 function setLimit(s,level){const n=volumeAttenuation(clamp(level,0,60));s.limit=n;s.master=Math.max(s.master,n);s.startup=Math.max(s.startup,n)}
@@ -276,6 +338,8 @@ $('presetDelete').onclick=()=>{const name=$('preset').value;if(name&&confirm('De
 $('backup').onclick=async()=>{try{const data=await get();const url=URL.createObjectURL(new Blob([JSON.stringify(data.state,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='receiver-settings.json';a.click();URL.revokeObjectURL(url)}catch(e){$('warning').textContent=e.message}};
 $('restoreFile').onclick=()=>$('file').click();
 $('file').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>4096)throw Error('Backup is too large');const restored=JSON.parse(await f.text());restored.mute=true;change(s=>{Object.assign(s,restored);s.lrMulti=true;s.surroundMulti=true;s.rec=false})}catch(err){$('warning').textContent='Backup error: '+err.message}finally{e.target.value=''}};
+bindPreview('master','master');names.forEach((_,i)=>bindPreview('channel'+i,'ch'+i));pairs.forEach(p=>bindPreview('pair'+p.id,'pair'+p.id));
+bindKnob('master','master');names.forEach((_,i)=>bindKnob('ch'+i,'channel'+i));pairs.forEach(p=>bindKnob('pair'+p.id,'pair'+p.id));
 refresh();setInterval(()=>{if(Date.now()>=nextPoll)refresh()},250);
 </script></body></html>
 )HTML";

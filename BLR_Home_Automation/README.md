@@ -142,7 +142,7 @@ using those nodes' hotspot addresses.
 
 * Phone on home Wi-Fi: open `http://192.168.31.200/` (or the configured master IP).
   Choose **AVR control** in the Amplifier tile to open `http://192.168.31.201/`.
-  Use **Master dashboard** on the receiver page to return.
+  Select the top-left receiver icon on the receiver page to return.
   AVR control stays disabled until the amplifier relay is on and the master
   receives a successful health response from the receiver over home Wi-Fi.
   The master checks approximately every two seconds and requires two

@@ -39,7 +39,8 @@ receiver's `/api/health` endpoint responds over home Wi-Fi. This is a web
 service check, not confirmation of the audio hardware. Navigation uses direct
 addresses to avoid an extra redirect; the master button reflects the last
 reported status and may briefly remain clickable after a disconnect.
-The receiver's **Master dashboard** link uses `MASTER_IP` from its `config.h`;
+The receiver's top-left icon links to the master dashboard using `MASTER_IP`
+from its `config.h`;
 keep it synchronized with the master configuration. It also requires a route
 to the master on the home network.
 Moving the firmware to a different ESP32 does not transfer NVS settings or
@@ -92,12 +93,23 @@ Home credentials must be configured in the receiver's `config.h`; the master
 node's settings do not automatically configure the receiver.
 
 The interface uses a 0-60 volume scale across the chip's -99 to 0 dB
-attenuation range, rounded to the nearest supported hardware setting. Level 0
-is the lowest level, not mute. Each UI step is approximately 1.65 dB; hardware
-ramping still uses 1 dB steps. Bass and treble use a 0-14 scale where 7 is
+attenuation range. Levels 20-60 use exact 1 dB steps (-40 to 0 dB), the
+normal listening range; levels 0-20 use 3 dB steps down to -99 dB. Level 0
+is the lowest level, not mute. Hardware ramping uses 1 dB steps. Saved
+settings store attenuation, so updating the firmware keeps the same loudness
+but can show a different level number. Bass and treble use a 0-14 scale where 7 is
 flat, each step corresponds to 2 dB, and the endpoints are -14 and +14 dB.
-Fresh settings default to volume 25, bass 7, treble 7, and 0 dB input and
+Fresh settings default to volume 14 (-58 dB), bass 7, treble 7, and 0 dB input and
 channel output gain. Existing saved settings are not reset to these defaults.
+
+Master and each speaker tile show the level on a 270-degree gauge (0 on the
+left, 60 on the right) with the channel name in the centre. The gauge is the
+volume control: drag or tap along the ring, or focus it and use the arrow
+keys. While dragging, the gauge
+shows the new level in amber with a marker at the current level, and turns
+green when the new level matches the current one. If the receiver stops
+responding for about 4 seconds the page shows it offline, and reloads itself
+automatically once the receiver is reachable again or has restarted.
 
 L/R and C/SW/SL/SR are routed from the decoder's six analog outputs through
 their respective volume controls. At startup, older saved routing is changed to

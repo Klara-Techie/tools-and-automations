@@ -137,8 +137,12 @@ void handleKnobLights() {
   reply(200, "text/plain", "Knob lights updated");
 }
 
+// Must match volumeLevel() in WebPage.h: levels 20-60 use 1 dB steps
+// (-40..0 dB), levels 0-20 use 3 dB steps down to -99 dB.
 unsigned volumeLevel(unsigned attenuation) {
-  return ((99 - attenuation) * 60 + 49) / 99;
+  if (attenuation <= 40) return 60 - attenuation;
+  const unsigned below = (attenuation - 39) / 3;
+  return below >= 20 ? 0 : 20 - below;
 }
 
 void logToneChange(const char *name, int previous, int next) {
